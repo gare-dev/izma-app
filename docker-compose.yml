@@ -1,0 +1,32 @@
+services:
+ web:
+  build: ./apps/web
+  container_name: izma-web
+  restart: always
+  volumes:
+   - ./apps/web:/app
+   - /app/node_modules
+  command: npm run dev
+  ports:
+   - "3000:3000"
+  depends_on:
+   - server
+
+ server:
+  build: ./apps/server
+  container_name: izma-server
+  restart: always
+  volumes:
+   - ./apps/server:/app
+  command: bun run dev
+  ports:
+   - "3001:3001"
+
+ nginx:
+  build: ./nginx
+  container_name: izma-nginx
+  ports:
+   - "80:80"
+  depends_on:
+   - web
+   - server
