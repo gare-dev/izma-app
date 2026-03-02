@@ -9,6 +9,10 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import styles from "@/styles/Room.module.css";
 
+export const dynamic = "force-dynamic";
+
+
+
 export default function RoomPage() {
     const router = useRouter();
     const { id: roomId } = router.query as { id: string };
@@ -153,4 +157,8 @@ export default function RoomPage() {
             </div>
         </>
     );
+}
+
+export async function getServerSideProps() {
+    return { props: {} };
 }
