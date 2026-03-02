@@ -1,0 +1,13 @@
+{
+    "name": "@izma/protocol",
+    "version": "1.0.0",
+    "type": "module",
+    "private": true,
+    "main": "./index.ts",
+    "exports": {
+        ".": "./index.ts"
+    },
+    "dependencies": {
+        "@izma/types": "workspace:*"
+    }
+}

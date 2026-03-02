@@ -1,41 +1,77 @@
 import { v4 as uuid } from "uuid";
+import { parseClientMessage } from "@izma/protocol";
+import type { WsData } from "./types.ts";
+import {
+    handleCreateRoom,
+    handleJoinRoom,
+    handleSetReady,
+    handleStartGame,
+    handlePlayerAction,
+    handleDisconnect,
+} from "./handlers.ts";
 
-const rooms = new Map();
+const PORT = Number(process.env.PORT ?? 3001);
 
-Bun.serve({
-    port: 3001,
+Bun.serve<WsData>({
+    port: PORT,
+
     fetch(req, server) {
+        const url = new URL(req.url);
 
-        if (new URL(req.url).pathname === "/ws/") {
+        // Health check
+        if (url.pathname === "/health") {
+            return new Response(JSON.stringify({ ok: true }), {
+                headers: { "Content-Type": "application/json" },
+            });
+        }
 
-            if (server.upgrade(req)) return;
+        // WebSocket upgrade
+        if (url.pathname === "/ws/" || url.pathname === "/ws") {
+            const upgraded = server.upgrade(req, {
+                data: { id: uuid(), roomId: null } satisfies WsData,
+            });
+            if (upgraded) return undefined;
         }
 
         return new Response("Not found", { status: 404 });
     },
 
     websocket: {
-        open(ws: { data?: { id: string; roomId: string | null } }) {
-            ws.data = {
-                id: uuid(),
-                roomId: null
-            };
-            console.log("Client connected:", ws.data?.id);
+        open(ws) {
+            console.log(`[ws] connected  ${ws.data.id}`);
         },
 
-        message(ws, message) {
-            try {
-                const data = JSON.parse(message.toString());
-                console.log("Received:", data);
-            } catch (err) {
-                console.log("Invalid JSON");
+        message(ws, raw) {
+            const msg = parseClientMessage(raw.toString());
+            if (!msg) {
+                ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Invalid message." } }));
+                return;
+            }
+
+            switch (msg.type) {
+                case "CREATE_ROOM":
+                    handleCreateRoom(ws, msg.payload);
+                    break;
+                case "JOIN_ROOM":
+                    handleJoinRoom(ws, msg.payload);
+                    break;
+                case "SET_READY":
+                    handleSetReady(ws);
+                    break;
+                case "START_GAME":
+                    handleStartGame(ws);
+                    break;
+                case "PLAYER_ACTION":
+                    handlePlayerAction(ws, msg.payload);
+                    break;
             }
         },
 
-        close(ws: { data?: { id: string; roomId: string | null } }) {
-            console.log("Client disconnected:", ws.data?.id);
-        }
-    }
+        close(ws) {
+            handleDisconnect(ws);
+            console.log(`[ws] disconnected ${ws.data.id}`);
+        },
+    },
 });
 
-console.log("Server running on http://localhost:3001");
+console.log(`[server] IZMA server running on ws://localhost:${PORT}`);

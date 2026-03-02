@@ -1,12 +1,16 @@
-FROM oven/bun:latest
-
+FROM oven/bun:1 AS base
 WORKDIR /app
 
-COPY package.json bun.lockb* ./
-RUN bun install
+# Install dependencies from monorepo root
+COPY package.json bun.lock* ./
+COPY packages/ packages/
+COPY apps/server/package.json apps/server/
 
-COPY . .
+RUN bun install 
+
+# Copy server source
+COPY apps/server/ apps/server/
 
 EXPOSE 3001
 
-CMD ["bun", "run", "src/index.ts"]
+CMD ["bun", "run", "apps/server/src/index.ts"]

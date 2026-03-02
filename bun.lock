@@ -14,6 +14,9 @@
     "apps/server": {
       "name": "server",
       "dependencies": {
+        "@izma/game-core": "workspace:*",
+        "@izma/protocol": "workspace:*",
+        "@izma/types": "workspace:*",
         "uuid": "^13.0.0",
         "zod": "^4.3.6",
       },
@@ -28,9 +31,12 @@
       "name": "web",
       "version": "0.1.0",
       "dependencies": {
+        "@izma/protocol": "workspace:*",
+        "@izma/types": "workspace:*",
         "next": "16.1.6",
         "react": "19.2.3",
         "react-dom": "19.2.3",
+        "zustand": "^5.0.11",
       },
       "devDependencies": {
         "@biomejs/biome": "2.2.0",
@@ -39,6 +45,24 @@
         "@types/react-dom": "^19",
         "typescript": "^5",
       },
+    },
+    "packages/game-core": {
+      "name": "@izma/game-core",
+      "version": "1.0.0",
+      "dependencies": {
+        "@izma/types": "workspace:*",
+      },
+    },
+    "packages/protocol": {
+      "name": "@izma/protocol",
+      "version": "1.0.0",
+      "dependencies": {
+        "@izma/types": "workspace:*",
+      },
+    },
+    "packages/types": {
+      "name": "@izma/types",
+      "version": "1.0.0",
     },
   },
   "trustedDependencies": [
@@ -115,6 +139,12 @@
 
     "@img/sharp-win32-x64": ["@img/sharp-win32-x64@0.34.5", "", { "os": "win32", "cpu": "x64" }, "sha512-+29YMsqY2/9eFEiW93eqWnuLcWcufowXewwSNIT6UwZdUUCrM3oFjMWH/Z6/TMmb4hlFenmfAVbpWeup2jryCw=="],
 
+    "@izma/game-core": ["@izma/game-core@workspace:packages/game-core"],
+
+    "@izma/protocol": ["@izma/protocol@workspace:packages/protocol"],
+
+    "@izma/types": ["@izma/types@workspace:packages/types"],
+
     "@next/env": ["@next/env@16.1.6", "", {}, "sha512-N1ySLuZjnAtN3kFnwhAwPvZah8RJxKasD7x1f8shFqhncnWZn4JMfg37diLNuoHsLAlrDfM3g4mawVdtAG8XLQ=="],
 
     "@next/swc-darwin-arm64": ["@next/swc-darwin-arm64@16.1.6", "", { "os": "darwin", "cpu": "arm64" }, "sha512-wTzYulosJr/6nFnqGW7FrG3jfUUlEf8UjGA0/pyypJl42ExdVgC6xJgcXQ+V8QFn6niSG2Pb8+MIG1mZr2vczw=="],
@@ -190,6 +220,8 @@
     "web": ["web@workspace:apps/web"],
 
     "zod": ["zod@4.3.6", "", {}, "sha512-rftlrkhHZOcjDwkGlnUtZZkvaPHCsDATp4pGpuOOMDaTdDDXF91wuVDJoWoPsKX/3YPQ5fHuF3STjcYyKr+Qhg=="],
+
+    "zustand": ["zustand@5.0.11", "", { "peerDependencies": { "@types/react": ">=18.0.0", "immer": ">=9.0.6", "react": ">=18.0.0", "use-sync-external-store": ">=1.2.0" }, "optionalPeers": ["@types/react", "immer", "react", "use-sync-external-store"] }, "sha512-fdZY+dk7zn/vbWNCYmzZULHRrss0jx5pPFiOuMZ/5HJN6Yv3u+1Wswy/4MpZEkEGhtNH+pwxZB8OKgUBPzYAGg=="],
 
     "bun-types/@types/node": ["@types/node@25.3.3", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-DpzbrH7wIcBaJibpKo9nnSQL0MTRdnWttGyE5haGwK86xgMOkFLp7vEyfQPGLOJh5wNYiJ3V9PmUMDhV9u8kkQ=="],
 

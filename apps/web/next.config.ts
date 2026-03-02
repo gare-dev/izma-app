@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   reactStrictMode: true,
+  transpilePackages: ["@izma/types", "@izma/protocol"],
 };
 
 export default nextConfig;

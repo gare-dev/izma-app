@@ -1,5 +1,6 @@
-node_modules
-.git
-.next
-dist
-.env
+**/.next
+**/node_modules
+**/.git
+**/dist
+**/.env
+**/.env.*

@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -13,8 +17,17 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "baseUrl": "../..",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "apps/web/*"
+      ],
+      "@izma/types": [
+        "packages/types/index.ts"
+      ],
+      "@izma/protocol": [
+        "packages/protocol/index.ts"
+      ]
     }
   },
   "include": [
@@ -23,7 +36,11 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "../../packages/types/**/*.ts",
+    "../../packages/protocol/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

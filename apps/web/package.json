@@ -3,16 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000 -H 0.0.0.0",
+    "dev": "bunx next dev -p 3000 -H 0.0.0.0",
     "build": "next build",
-    "start": "next start -p 3000 -H 0.0.0.0",
+    "start": "bunx next start -p 3000 -H 0.0.0.0",
     "lint": "biome check",
     "format": "biome format --write"
   },
   "dependencies": {
+    "@izma/protocol": "workspace:*",
+    "@izma/types": "workspace:*",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",

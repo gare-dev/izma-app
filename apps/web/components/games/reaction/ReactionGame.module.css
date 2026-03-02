@@ -1,0 +1,219 @@
+.center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 2rem 1rem;
+}
+
+/* ── Big countdown number ── */
+.bigNumber {
+    font-size: clamp(5rem, 20vw, 10rem);
+    font-weight: 900;
+    line-height: 1;
+    color: var(--primary-hover);
+    text-shadow: 0 0 40px var(--primary-glow);
+    animation: pulse 800ms ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.08);
+        opacity: 0.85;
+    }
+}
+
+.bigText {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.hint {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.subHint {
+    font-size: 0.85rem;
+    color: var(--text-subtle);
+    margin-top: 0.5rem;
+}
+
+.roundBadge {
+    background: color-mix(in srgb, var(--primary) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+    color: var(--primary-hover);
+    border-radius: 20px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* ── Arena button (waiting + reacting) ── */
+.arena {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 340px;
+    border-radius: 24px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: background 200ms ease, transform 80ms ease, box-shadow 200ms ease;
+    user-select: none;
+    padding: 2rem;
+}
+
+.waiting {
+    background: var(--bg-card);
+    border-color: var(--border);
+}
+
+.reacting {
+    background: var(--accent);
+    border-color: #e11d48;
+    animation: flashIn 150ms ease-out;
+    box-shadow: 0 0 60px rgba(244, 63, 94, 0.4);
+}
+
+@keyframes flashIn {
+    from {
+        transform: scale(0.97);
+        opacity: 0.8;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.arena:active {
+    transform: scale(0.98);
+}
+
+.waitText {
+    font-size: clamp(2rem, 9vw, 4rem);
+    font-weight: 900;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+
+.reactText {
+    font-size: clamp(3rem, 12vw, 5.5rem);
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Round result ── */
+.resultCard {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+    width: 100%;
+    max-width: 360px;
+}
+
+.resultCard[data-outcome="win"] {
+    border-color: var(--success);
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+    color: var(--success);
+}
+
+.resultCard[data-outcome="lose"] {
+    color: var(--text);
+}
+
+.resultCard[data-outcome="self-false"],
+.resultCard[data-outcome="false"] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+}
+
+.resultIcon {
+    font-size: 1.5rem;
+}
+
+/* ── Mini scoreboard ── */
+.miniScore {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    width: 100%;
+    max-width: 360px;
+    margin-top: 0.5rem;
+}
+
+.scoreRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.88rem;
+}
+
+.scoreRow.scoreSelf {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+/* ── Score bar (top bar during game) ── */
+.scoreBar {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.25rem 0;
+}
+
+.scoreChip {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.rank {
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.chipName {
+    font-weight: 600;
+}
+
+.chipScore {
+    color: var(--success);
+    font-weight: 800;
+}
