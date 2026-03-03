@@ -1,6 +1,7 @@
 import { create } from "zustand";
-import type { Room, ReactionGameState } from "@izma/types";
+import type { Room, ReactionGameState, Game, GameSelectionMode, RoomGameSettings } from "@izma/types";
 import type { ServerMessage, GameResults, ClientMessage } from "@izma/protocol";
+import { apiGetGames } from "@/lib/api";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -21,14 +22,30 @@ interface GameStore {
     gameResults: GameResults | null;
     error: string | null;
 
+    // ── Game Selection (for room creation) ────────────────────────────────────
+    availableGames: Game[];
+    selectedGameIds: string[];
+    totalRounds: number;
+    selectionMode: GameSelectionMode;
+    gameOrder: string[];           // from ROOM_GAMES_DEFINED
+
+    // ── Coins notification ────────────────────────────────────────────────────
+    lastCoinUpdate: { delta: number; coins: number; reason: string } | null;
+
     // ── Actions ───────────────────────────────────────────────────────────────
     setNickname: (n: string) => void;
     connect: (onOpen?: () => void) => void;
     disconnect: () => void;
     send: (msg: ClientMessage) => void;
 
+    // ── Game selection actions ─────────────────────────────────────────────────
+    fetchGames: () => Promise<void>;
+    setSelectionMode: (mode: GameSelectionMode) => void;
+    setTotalRounds: (n: number) => void;
+    toggleGameSelection: (gameId: string) => void;
+
     // ── High-level helpers ────────────────────────────────────────────────────
-    createRoom: (nickname: string, maxPlayers: number) => void;
+    createRoom: (nickname: string, maxPlayers: number, gameSettings?: RoomGameSettings) => void;
     joinRoom: (roomId: string, nickname: string) => void;
     setReady: () => void;
     startGame: () => void;
@@ -47,7 +64,7 @@ function getWsUrl(): string {
     // In development connect directly to server
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
     const host = process.env.NODE_ENV === "development"
-        ? `${window.location.hostname}:3001`
+        ? `${window.location.hostname}:5051`
         : window.location.host;
     return `${proto}://${host}/ws/`;
 }
@@ -64,7 +81,42 @@ export const useGameStore = create<GameStore>((set, get) => ({
     gameResults: null,
     error: null,
 
+    // Game selection defaults
+    availableGames: [],
+    selectedGameIds: ["reaction"],
+    totalRounds: 3,
+    selectionMode: "MANUAL",
+    gameOrder: [],
+    lastCoinUpdate: null,
+
     setNickname: (n) => set({ nickname: n }),
+
+    // ── Game selection ────────────────────────────────────────────────────────
+
+    fetchGames: async () => {
+        try {
+            const games = await apiGetGames();
+            set({ availableGames: games });
+        } catch {
+            // fallback — keep empty
+        }
+    },
+
+    setSelectionMode: (mode) => set({ selectionMode: mode }),
+    setTotalRounds: (n) => set({ totalRounds: Math.max(1, Math.min(20, n)) }),
+    toggleGameSelection: (gameId) => {
+        const current = get().selectedGameIds;
+        if (current.includes(gameId)) {
+            // Don't allow removing the last game
+            if (current.length > 1) {
+                set({ selectedGameIds: current.filter((g) => g !== gameId) });
+            }
+        } else {
+            set({ selectedGameIds: [...current, gameId] });
+        }
+    },
+
+    // ── Connection ────────────────────────────────────────────────────────────
 
     connect: (onOpen) => {
         const existing = get().ws;
@@ -78,6 +130,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
         ws.onopen = () => {
             set({ status: "connected" });
+
+            // Send auth token over WS if available
+            if (typeof window !== "undefined") {
+                const token = localStorage.getItem("izma_token");
+                if (token) {
+                    ws.send(JSON.stringify({ type: "AUTH", payload: { token } }));
+                }
+            }
+
             onOpen?.();
         };
 
@@ -99,7 +160,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     disconnect: () => {
         get().ws?.close();
-        set({ ws: null, status: "idle", room: null, gameState: null, gameResults: null });
+        set({ ws: null, status: "idle", room: null, gameState: null, gameResults: null, gameOrder: [], lastCoinUpdate: null });
     },
 
     send: (msg) => {
@@ -111,19 +172,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    createRoom: (nickname, maxPlayers) => {
-        const { connect, send, setNickname } = get();
+    createRoom: (nickname, maxPlayers, gameSettings) => {
+        const { connect, send, setNickname, totalRounds, selectionMode, selectedGameIds } = get();
         setNickname(nickname);
-        set({ gameResults: null, gameState: null, room: null });
+        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null });
+
+        const games: RoomGameSettings = gameSettings ?? {
+            totalRounds,
+            mode: selectionMode,
+            selectedGameIds: selectionMode === "MANUAL" ? selectedGameIds : [],
+        };
+
         connect(() => {
-            send({ type: "CREATE_ROOM", payload: { nickname, maxPlayers, gameId: "reaction" } });
+            send({
+                type: "CREATE_ROOM",
+                payload: { nickname, maxPlayers, gameId: games.selectedGameIds[0] || "reaction", games },
+            });
         });
     },
 
     joinRoom: (roomId, nickname) => {
         const { connect, send, setNickname } = get();
         setNickname(nickname);
-        set({ gameResults: null, gameState: null, room: null });
+        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null });
         connect(() => {
             send({ type: "JOIN_ROOM", payload: { roomId, nickname } });
         });
@@ -136,7 +207,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     clearError: () => set({ error: null }),
 
     resetGame: () => {
-        set({ gameState: null, gameResults: null });
+        set({ gameState: null, gameResults: null, lastCoinUpdate: null });
         // Re-enter lobby
         const room = get().room;
         if (room) {
@@ -167,6 +238,25 @@ function handleMessage(msg: ServerMessage) {
 
         case "ERROR":
             useGameStore.setState({ error: msg.payload.message });
+            break;
+
+        case "AUTH_OK":
+            // WS is now authenticated — no state action needed
+            console.log(`[ws] authenticated as ${msg.payload.username}`);
+            break;
+
+        case "ROOM_GAMES_DEFINED":
+            useGameStore.setState({ gameOrder: msg.payload.gameOrder });
+            break;
+
+        case "COINS_UPDATE":
+            useGameStore.setState({
+                lastCoinUpdate: {
+                    delta: msg.payload.delta,
+                    coins: msg.payload.coins,
+                    reason: msg.payload.reason,
+                },
+            });
             break;
     }
 }

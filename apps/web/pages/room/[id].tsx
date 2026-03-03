@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import { useGameStore } from "@/store/useGameStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import LobbyView from "@/components/lobby/LobbyView";
 import ReactionGame, { GameScoreBar } from "@/components/games/reaction/ReactionGame";
 import ResultsScreen from "@/components/ResultsScreen";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import styles from "@/styles/Room.module.css";
+
+
 
 export default function RoomPage() {
     const router = useRouter();
@@ -24,7 +27,14 @@ export default function RoomPage() {
         joinRoom,
         disconnect,
         resetGame,
+        lastCoinUpdate,
+        gameOrder,
     } = useGameStore();
+
+    const { hydrate } = useAuthStore();
+
+    // Hydrate auth store
+    useEffect(() => { hydrate(); }, [hydrate]);
 
     // If user arrives via share link without being connected
     const [joinNickname, setJoinNickname] = useState("");
@@ -102,6 +112,11 @@ export default function RoomPage() {
             <>
                 <Head><title>IZMA — Resultado</title></Head>
                 <div className={styles.page}>
+                    {lastCoinUpdate && (
+                        <div className={styles.coinToast}>
+                            🪙 +{lastCoinUpdate.delta} moedas ({lastCoinUpdate.reason === "VICTORY" ? "vitória" : "participação"})
+                        </div>
+                    )}
                     <ResultsScreen
                         room={room}
                         results={gameResults}
@@ -153,4 +168,8 @@ export default function RoomPage() {
             </div>
         </>
     );
+}
+
+export async function getServerSideProps() {
+    return { props: {} };
 }

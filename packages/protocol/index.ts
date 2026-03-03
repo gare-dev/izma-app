@@ -1,13 +1,15 @@
-import type { Room, ReactionGameState } from "@izma/types";
+import type { Room, ReactionGameState, RoomGameSettings } from "@izma/types";
 
 // ─── Client → Server ───────────────────────────────────────────────────────
 
 export type ClientMessage =
-    | { type: "CREATE_ROOM"; payload: { nickname: string; maxPlayers: number; gameId: string } }
+    | { type: "CREATE_ROOM"; payload: { nickname: string; maxPlayers: number; gameId: string; games: RoomGameSettings } }
     | { type: "JOIN_ROOM"; payload: { roomId: string; nickname: string } }
     | { type: "SET_READY" }
     | { type: "START_GAME" }
-    | { type: "PLAYER_ACTION"; payload: { action: string; data?: unknown } };
+    | { type: "PLAYER_ACTION"; payload: { action: string; data?: unknown } }
+    /** Sent right after WS connect if the user has a JWT */
+    | { type: "AUTH"; payload: { token: string } };
 
 // ─── Server → Client ───────────────────────────────────────────────────────
 
@@ -29,7 +31,13 @@ export type ServerMessage =
     | { type: "ROOM_UPDATE"; payload: { room: Room } }
     | { type: "GAME_STATE"; payload: { gameState: ReactionGameState } }
     | { type: "GAME_END"; payload: GameResults }
-    | { type: "ERROR"; payload: { message: string } };
+    | { type: "ERROR"; payload: { message: string } }
+    /** Confirms the user is authenticated over this WS */
+    | { type: "AUTH_OK"; payload: { userId: string; username: string } }
+    /** Sent once after START_GAME so every client knows the planned game order */
+    | { type: "ROOM_GAMES_DEFINED"; payload: { totalRounds: number; gameOrder: string[] } }
+    /** Notifies coin reward at end of match */
+    | { type: "COINS_UPDATE"; payload: { userId: string; coins: number; delta: number; reason: string } };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useGameStore } from "@/store/useGameStore";
+import { useAuthStore } from "@/store/useAuthStore";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import AuthModal from "@/components/auth/AuthModal";
+import GameSelection from "@/components/games/GameSelection";
 import styles from "@/styles/Home.module.css";
 
 type Tab = "create" | "join";
@@ -11,6 +14,7 @@ type Tab = "create" | "join";
 export default function HomePage() {
   const router = useRouter();
   const { createRoom, joinRoom, room, error, clearError, status } = useGameStore();
+  const { user, token, hydrate } = useAuthStore();
 
   const [tab, setTab] = useState<Tab>("create");
   const [nickname, setNickname] = useState("");
@@ -18,6 +22,20 @@ export default function HomePage() {
   const [roomCode, setRoomCode] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+
+  // Hydrate auth store from localStorage on mount
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  // Always sync nickname from authenticated user
+  const isLoggedIn = !!user && !!token;
+  useEffect(() => {
+    if (user) {
+      setNickname(user.username);
+    }
+  }, [user]);
 
   // Pre-fill room code from ?room= query param (share-link flow)
   useEffect(() => {
@@ -72,7 +90,25 @@ export default function HomePage() {
 
       <div className={styles.page}>
         <header className={styles.hero}>
-          <div className={styles.logo}>⚡ IZMA</div>
+          <div className={styles.heroTop}>
+            <div className={styles.logo}>⚡ IZMA</div>
+            <button
+              className={styles.profileBtn}
+              onClick={() => setAuthOpen(true)}
+              type="button"
+            >
+              {isLoggedIn ? (
+                <>
+                  <span className={styles.profileAvatar}>
+                    {user.username[0]?.toUpperCase() ?? "?"}
+                  </span>
+                  <span className={styles.profileCoins}>🪙 {user.coins}</span>
+                </>
+              ) : (
+                "Entrar"
+              )}
+            </button>
+          </div>
           <p className={styles.tagline}>Minigames multiplayer em tempo real</p>
         </header>
 
@@ -89,24 +125,32 @@ export default function HomePage() {
           <form className={styles.form} onSubmit={handleSubmit} noValidate>
             <Input
               id="nickname"
-              label="Seu apelido"
+              label={isLoggedIn ? `Jogando como` : "Seu apelido"}
               placeholder="Ex: Thunderbolt"
               value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
+              onChange={(e) => { if (!isLoggedIn) setNickname(e.target.value); }}
               maxLength={20}
               autoComplete="off"
-              autoFocus
+              autoFocus={!isLoggedIn}
+              disabled={isLoggedIn}
+              title={isLoggedIn ? "Seu nome de usuário é usado automaticamente" : undefined}
+              style={isLoggedIn ? { opacity: 0.7, cursor: "not-allowed" } : undefined}
             />
 
             {tab === "create" && (
-              <div className={styles.field}>
-                <span className={styles.label}>Máximo de jogadores</span>
-                <div className={styles.stepper}>
-                  <button type="button" className={styles.step} onClick={() => setMaxPlayers((n) => Math.max(2, n - 1))} disabled={maxPlayers <= 2}>−</button>
-                  <span className={styles.stepValue}>{maxPlayers}</span>
-                  <button type="button" className={styles.step} onClick={() => setMaxPlayers((n) => Math.min(8, n + 1))} disabled={maxPlayers >= 8}>+</button>
+              <>
+                <div className={styles.field}>
+                  <span className={styles.label}>Máximo de jogadores</span>
+                  <div className={styles.stepper}>
+                    <button type="button" className={styles.step} onClick={() => setMaxPlayers((n) => Math.max(2, n - 1))} disabled={maxPlayers <= 2}>−</button>
+                    <span className={styles.stepValue}>{maxPlayers}</span>
+                    <button type="button" className={styles.step} onClick={() => setMaxPlayers((n) => Math.min(8, n + 1))} disabled={maxPlayers >= 8}>+</button>
+                  </div>
                 </div>
-              </div>
+
+                {/* ── Game selection ── */}
+                <GameSelection />
+              </>
             )}
 
             {tab === "join" && (
@@ -139,6 +183,12 @@ export default function HomePage() {
           <p>Rápido · Competitivo · Para o campus</p>
         </footer>
       </div>
+
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </>
   );
+}
+
+export async function getServerSideProps() {
+  return { props: {} };
 }
