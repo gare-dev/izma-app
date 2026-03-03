@@ -11,6 +11,6 @@ RUN bun install
 # Copy server source
 COPY apps/server/ apps/server/
 
-EXPOSE 3001
+EXPOSE 5051
 
 CMD ["bun", "run", "apps/server/src/index.ts"]

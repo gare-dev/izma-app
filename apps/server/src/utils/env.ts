@@ -2,7 +2,7 @@
 // Centralises all env access with defaults.
 
 export const ENV = {
-    PORT: Number(process.env.PORT ?? 3001),
+    PORT: Number(process.env.PORT ?? 5051),
     DATABASE_URL: process.env.DATABASE_URL ?? "",
     JWT_SECRET: process.env.JWT_SECRET ?? "izma-dev-secret-change-in-production",
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN ?? "2h",

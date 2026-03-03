@@ -64,7 +64,7 @@ function getWsUrl(): string {
     // In development connect directly to server
     const proto = window.location.protocol === "https:" ? "wss" : "ws";
     const host = process.env.NODE_ENV === "development"
-        ? `${window.location.hostname}:3001`
+        ? `${window.location.hostname}:5051`
         : window.location.host;
     return `${proto}://${host}/ws/`;
 }

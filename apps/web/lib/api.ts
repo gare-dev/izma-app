@@ -18,7 +18,7 @@ function getBaseUrl(): string {
     if (base) return base;
     const host =
         process.env.NODE_ENV === "development"
-            ? `${window.location.hostname}:3001`
+            ? `${window.location.hostname}:5051`
             : window.location.host;
     return `${window.location.protocol}//${host}`;
 }
