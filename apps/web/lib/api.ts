@@ -20,7 +20,7 @@ function getBaseUrl(): string {
         process.env.NODE_ENV === "development"
             ? `${window.location.hostname}:5051`
             : window.location.host;
-    return `${window.location.protocol}//${host}`;
+    return `${window.location.protocol}//${host}/api`;
 }
 
 async function request<T>(
