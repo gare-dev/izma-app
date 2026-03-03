@@ -49,6 +49,8 @@ export function roomSnapshot(room: LiveRoom): import("@izma/types").Room {
         state: room.state,
         maxPlayers: room.maxPlayers,
         gameId: room.gameId,
+        games: room.games,
+        currentGameIndex: room.currentGameIndex,
         gameState: room.engine ? room.engine.getState() : null,
         players: room.players.map((p) => ({
             id: p.id,
@@ -56,6 +58,8 @@ export function roomSnapshot(room: LiveRoom): import("@izma/types").Room {
             score: p.score,
             status: p.status,
             isHost: p.isHost,
+            userId: p.userId,
+            avatarUrl: p.avatarUrl,
         })),
     };
 }

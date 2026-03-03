@@ -3,40 +3,31 @@ services:
   build:
    context: .
    dockerfile: apps/web/Dockerfile
-   target: deps
   container_name: izma-web-dev
+  working_dir: /app/apps/web
   volumes:
    - .:/app
    - /app/node_modules
-   - /app/apps/web/.next
-  command: bun run --cwd apps/web dev
+  command: bunx next dev -H 0.0.0.0
   environment:
    - NODE_ENV=development
-   - NEXT_PUBLIC_WS_URL=ws://localhost/ws/
+   - NEXT_PUBLIC_WS_URL=ws://server:3001/ws/
+   - CHOKIDAR_USEPOLLING=true
   ports:
    - "3000:3000"
   depends_on:
    - server
-  restart: unless-stopped
 
  server:
   build:
    context: .
    dockerfile: apps/server/Dockerfile
   container_name: izma-server-dev
+  working_dir: /app
   volumes:
    - .:/app
   command: bun run --watch apps/server/src/index.ts
   environment:
    - PORT=3001
-  restart: unless-stopped
-
- nginx:
-  build: ./nginx
-  container_name: izma-nginx-dev
   ports:
-   - "80:80"
-  depends_on:
-   - web
-   - server
-  restart: unless-stopped
+   - "3001:3001"
