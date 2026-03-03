@@ -49,9 +49,9 @@ app.get("/health", (_req, res) => {
 
 // ─── REST routes ────────────────────────────────────────────────────────────
 
-app.use("/auth", authRouter);
-app.use("/users", usersRouter);
-app.use("/games", gamesRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/games", gamesRouter);
 
 // ─── 404 fallback ───────────────────────────────────────────────────────────
 
