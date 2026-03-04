@@ -8,7 +8,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev:web": "bun run --cwd apps/web dev",
+    "dev:web": "cd apps/web && npm run dev",
     "dev:server": "bun run --cwd apps/server dev",
     "build:web": "bun run --cwd apps/web build",
     "lint": "bunx biome check .",
