@@ -11,6 +11,7 @@ import { parseClientMessage } from "@izma/protocol";
 
 import { ENV } from "./utils/env.ts";
 import { testConnection } from "./db.ts";
+import { testRedis } from "./redis.ts";
 import { authRouter } from "./modules/auth/auth.routes.ts";
 import { usersRouter } from "./modules/users/users.routes.ts";
 import { gamesRouter } from "./modules/games/games.routes.ts";
@@ -134,6 +135,7 @@ wss.on("connection", (ws: WebSocket) => {
 async function start() {
     try {
         await testConnection();
+        await testRedis();
     } catch (err) {
         console.error("[db] Failed to connect to PostgreSQL:", err);
         process.exit(1);

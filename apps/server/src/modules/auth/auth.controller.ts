@@ -3,6 +3,7 @@
 
 import type { Request, Response } from "express";
 import type { RegisterDTO, LoginDTO, GuestDTO } from "@izma/types";
+import { redis } from "../../redis.ts";
 import {
     validateRegister,
     validateLogin,
@@ -63,14 +64,26 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
         return;
     }
 
-    res.cookie("refreshToken", result.refreshToken, {
+    res.status(200).cookie("refreshToken", result.refreshToken, {
         httpOnly: true,
         sameSite: "strict",
         path: "/auth/refresh",
         maxAge: 604800_000,
-    });
+    }).json(result.auth);
 
-    res.status(200).json(result.auth);
+    // Cache session in Redis (TTL = 2h = 7200s)
+    await redis.set(
+        `session:${result.auth.user.id}`,
+        JSON.stringify({
+            id: result.auth.user.id,
+            username: result.auth.user.username,
+            avatarUrl: result.auth.user.avatarUrl,
+            bio: result.auth.user.bio,
+            coins: result.auth.user.coins,
+        }),
+        "EX",
+        7200,
+    );
 }
 
 // ─── POST /auth/guest ───────────────────────────────────────────────────────
