@@ -6,6 +6,7 @@
 import type { CoinTransaction } from "@izma/types";
 import { query } from "../../db.ts";
 import { addCoinsToUser, getUserBalance } from "../auth/auth.service.ts";
+import { redis } from "../../redis.ts";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -37,6 +38,8 @@ export async function awardCoins(
     // Update user balance in DB
     const newBalance = await addCoinsToUser(userId, amount);
     if (newBalance === null) return null; // guest or not found
+
+    await redis.del(`session:${userId}`); // invalidate cache
 
     // Insert transaction log into DB
     await query(

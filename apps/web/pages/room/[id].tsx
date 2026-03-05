@@ -4,7 +4,10 @@ import Head from "next/head";
 import { useGameStore } from "@/store/useGameStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import LobbyView from "@/components/lobby/LobbyView";
-import ReactionGame, { GameScoreBar } from "@/components/games/reaction/ReactionGame";
+import ScoreBar from "@/components/games/ScoreBar";
+import { getGameComponent } from "@/components/games/registry";
+// Register all game components (side-effect imports)
+import "@/components/games/reaction/ReactionGame";
 import ResultsScreen from "@/components/ResultsScreen";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -29,6 +32,7 @@ export default function RoomPage() {
         resetGame,
         lastCoinUpdate,
         gameOrder,
+        sendAction,
     } = useGameStore();
 
     const { hydrate } = useAuthStore();
@@ -130,18 +134,31 @@ export default function RoomPage() {
 
     // ── Playing ───────────────────────────────────────────────────────────────
     if (room.state === "playing" && gameState) {
+        const GameComponent = getGameComponent(gameState.gameId);
+
         return (
             <>
                 <Head><title>IZMA — Em Jogo</title></Head>
                 <div className={styles.page}>
                     <div className={styles.gameHeader}>
-                        <GameScoreBar room={room} gameState={gameState} />
+                        <ScoreBar room={room} gameState={gameState} currentPlayerId={playerId} />
                         <span className={styles.roundIndicator}>
                             Rodada {gameState.round}/{gameState.totalRounds}
                         </span>
                     </div>
                     <div className={styles.gameArea}>
-                        <ReactionGame room={room} gameState={gameState} />
+                        {GameComponent ? (
+                            <GameComponent
+                                room={room}
+                                gameState={gameState}
+                                playerId={playerId}
+                                onAction={sendAction}
+                            />
+                        ) : (
+                            <div style={{ textAlign: "center", padding: "2rem" }}>
+                                <p>Jogo &quot;{gameState.gameId}&quot; não encontrado no cliente.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </>

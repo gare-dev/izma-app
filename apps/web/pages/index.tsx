@@ -14,7 +14,7 @@ type Tab = "create" | "join";
 export default function HomePage() {
   const router = useRouter();
   const { createRoom, joinRoom, room, error, clearError, status } = useGameStore();
-  const { user, token, hydrate } = useAuthStore();
+  const { user, token, hydrate, fetchProfile } = useAuthStore();
 
   const [tab, setTab] = useState<Tab>("create");
   const [nickname, setNickname] = useState("");
@@ -28,6 +28,11 @@ export default function HomePage() {
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  // Fetch fresh profile (coins, etc.) every time the page loads
+  useEffect(() => {
+    if (token) fetchProfile();
+  }, [token, fetchProfile]);
 
   // Always sync nickname from authenticated user
   const isLoggedIn = !!user && !!token;

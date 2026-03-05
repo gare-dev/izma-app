@@ -1,4 +1,18 @@
 services:
+ redis:
+  image: redis:7-alpine
+  container_name: izma-redis
+  restart: unless-stopped
+  ports:
+   - "6379:6379"
+  volumes:
+   - redis-data:/data
+  healthcheck:
+   test: ["CMD", "redis-cli", "ping"]
+   interval: 10s
+   timeout: 3s
+   retries: 5
+
  web:
   build:
    context: .
@@ -21,6 +35,10 @@ services:
    - apps/server/.env
   environment:
    - PORT=5051
+   - REDIS_URL=redis://redis:6379
+  depends_on:
+   redis:
+    condition: service_healthy
 
  nginx:
   build: ./nginx
@@ -30,3 +48,6 @@ services:
   depends_on:
    - web
    - server
+
+volumes:
+ redis-data:

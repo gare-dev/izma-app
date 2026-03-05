@@ -1,15 +1,11 @@
 import { useEffect, useRef } from "react";
 import type { Room, ReactionGameState } from "@izma/types";
-import { useGameStore } from "@/store/useGameStore";
+import type { GameComponentProps } from "../registry";
+import { registerGameComponent } from "../registry";
 import styles from "./ReactionGame.module.css";
 
-interface ReactionGameProps {
-    room: Room;
-    gameState: ReactionGameState;
-}
-
-export default function ReactionGame({ room, gameState }: ReactionGameProps) {
-    const { playerId, react } = useGameStore();
+export default function ReactionGame({ room, gameState: rawState, playerId, onAction }: GameComponentProps) {
+    const gameState = rawState as ReactionGameState;
     const hasReactedRef = useRef(false);
 
     // Reset per round
@@ -22,7 +18,7 @@ export default function ReactionGame({ room, gameState }: ReactionGameProps) {
     function handleClick() {
         if (hasReactedRef.current) return;
         hasReactedRef.current = true;
-        react();
+        onAction("REACT");
     }
 
     const me = room.players.find((p) => p.id === playerId);
@@ -133,20 +129,5 @@ export default function ReactionGame({ room, gameState }: ReactionGameProps) {
     return null;
 }
 
-// ── Lobby scores shown during countdown ─────────────────────────────────────
-export function GameScoreBar({ room, gameState }: { room: Room; gameState: ReactionGameState }) {
-    return (
-        <div className={styles.scoreBar}>
-            {room.players
-                .slice()
-                .sort((a, b) => (gameState.scores[b.id] ?? 0) - (gameState.scores[a.id] ?? 0))
-                .map((p, i) => (
-                    <div key={p.id} className={styles.scoreChip}>
-                        <span className={styles.rank}>{i + 1}</span>
-                        <span className={styles.chipName}>{p.nickname}</span>
-                        <span className={styles.chipScore}>{gameState.scores[p.id] ?? 0}</span>
-                    </div>
-                ))}
-        </div>
-    );
-}
+// ── Register this game in the frontend registry ─────────────────────────────
+registerGameComponent("reaction", ReactionGame);

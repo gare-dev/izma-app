@@ -1,4 +1,4 @@
-import type { Room, ReactionGameState, RoomGameSettings } from "@izma/types";
+import type { Room, AnyGameState, RoomGameSettings } from "@izma/types";
 
 // ─── Client → Server ───────────────────────────────────────────────────────
 
@@ -16,8 +16,9 @@ export type ClientMessage =
 export type RoundResult = {
     round: number;
     winnerId: string | null;
-    reactionTime: number | null;
-    falseStarterId: string | null;
+    // Reaction-game specific (optional so other games don't need them)
+    reactionTime?: number | null;
+    falseStarterId?: string | null;
 };
 
 export type GameResults = {
@@ -29,7 +30,7 @@ export type GameResults = {
 export type ServerMessage =
     | { type: "JOINED"; payload: { playerId: string; roomId: string } }
     | { type: "ROOM_UPDATE"; payload: { room: Room } }
-    | { type: "GAME_STATE"; payload: { gameState: ReactionGameState } }
+    | { type: "GAME_STATE"; payload: { gameState: AnyGameState } }
     | { type: "GAME_END"; payload: GameResults }
     | { type: "ERROR"; payload: { message: string } }
     /** Confirms the user is authenticated over this WS */

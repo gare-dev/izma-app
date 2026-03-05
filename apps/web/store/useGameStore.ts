@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Room, ReactionGameState, Game, GameSelectionMode, RoomGameSettings } from "@izma/types";
+import type { Room, AnyGameState, Game, GameSelectionMode, RoomGameSettings } from "@izma/types";
 import type { ServerMessage, GameResults, ClientMessage } from "@izma/protocol";
 import { apiGetGames } from "@/lib/api";
 
@@ -18,7 +18,7 @@ interface GameStore {
 
     // ── Room ──────────────────────────────────────────────────────────────────
     room: Room | null;
-    gameState: ReactionGameState | null;
+    gameState: AnyGameState | null;
     gameResults: GameResults | null;
     error: string | null;
 
@@ -49,6 +49,7 @@ interface GameStore {
     joinRoom: (roomId: string, nickname: string) => void;
     setReady: () => void;
     startGame: () => void;
+    sendAction: (action: string, data?: unknown) => void;
     react: () => void;
     clearError: () => void;
     resetGame: () => void;
@@ -202,7 +203,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     setReady: () => get().send({ type: "SET_READY" }),
     startGame: () => get().send({ type: "START_GAME" }),
-    react: () => get().send({ type: "PLAYER_ACTION", payload: { action: "REACT" } }),
+    sendAction: (action, data) => get().send({ type: "PLAYER_ACTION", payload: { action, data } }),
+    react: () => get().sendAction("REACT"),
 
     clearError: () => set({ error: null }),
 

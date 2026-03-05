@@ -82,29 +82,31 @@ export interface Room {
     gameId: string;
     games: RoomGameSettings;
     currentGameIndex: number;
-    gameState: ReactionGameState | null;
+    gameState: AnyGameState | null;
 }
 
-// ─── Reaction Game ──────────────────────────────────────────────────────────
+// ─── Base Game State ────────────────────────────────────────────────────────
+// Every minigame state MUST extend this base. The `gameId` field lets the
+// frontend pick the correct renderer component.
 
-export type ReactionPhase =
-    | "idle"
-    | "countdown"
-    | "waiting"   // before signal – don't click
-    | "reacting"  // signal shown – click now!
-    | "round_result"
-    | "game_over";
-
-export interface ReactionGameState {
+export interface BaseGameState {
+    gameId: string;
+    phase: string;
     round: number;
     totalRounds: number;
-    phase: ReactionPhase;
-    countdown: number;         // seconds remaining in pre-game countdown
-    winner: string | null;     // playerId who won this round
-    falseStarter: string | null; // playerId who clicked too early
     scores: Record<string, number>;
-    lastReactionTime: number | null; // ms, winner's reaction time this round
 }
+
+// ─── Per-Game State Types ───────────────────────────────────────────────────
+// Each minigame has its own file under games/. Re-exported here for convenience.
+
+export { type ReactionPhase, type ReactionGameState } from "./games/reaction";
+
+// ─── Game State Union ──────────────────────────────────────────────────────
+// Add new game state interfaces to this union as you create them.
+
+import type { ReactionGameState } from "./games/reaction";
+export type AnyGameState = ReactionGameState;
 
 // ─── Auth DTOs ─────────────────────────────────────────────────────────────
 

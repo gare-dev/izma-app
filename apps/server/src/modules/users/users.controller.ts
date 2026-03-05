@@ -6,6 +6,7 @@ import type { Request, Response } from "express";
 import type { UpdateProfileDTO } from "@izma/types";
 import { getUserById, updateUser, toPublicUser } from "../auth/auth.service.ts";
 import { isValidUrl, sanitize, type ValidationResult, fail, ok } from "../../utils/validation.ts";
+import { redis } from "../../redis.ts";
 
 // ─── Validation ─────────────────────────────────────────────────────────────
 
@@ -34,6 +35,13 @@ export async function handleGetMe(req: Request, res: Response): Promise<void> {
             bio: null,
             coins: 0,
         });
+        return;
+    }
+
+    const cached = await redis.get(`session:${ctx.userId}`);
+
+    if (cached) {
+        res.status(200).json(JSON.parse(cached));
         return;
     }
 
