@@ -1,7 +1,7 @@
 import type { Player, ReactionGameState } from "@izma/types";
 import type { ServerMessage, GameResults, RoundResult } from "@izma/protocol";
-import { registerEngine, type BroadcastFn } from "../index";
-import type { GameEngine } from "../index";
+import { registerEngine, type BroadcastFn } from "../registry";
+import type { GameEngine } from "../registry";
 
 // ─── Reaction Game Engine ───────────────────────────────────────────────────
 
