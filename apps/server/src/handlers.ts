@@ -1,7 +1,7 @@
 import { v4 as uuid } from "uuid";
 import type { WebSocket } from "ws";
 import type { ClientMessage } from "@izma/protocol";
-import { ReactionGameEngine } from "@izma/game-core";
+import { createEngine } from "@izma/game-core";
 import {
     getRoom,
     setRoom,
@@ -199,7 +199,8 @@ export function handleStartGame(ws: WebSocket) {
         },
     });
 
-    const engine = new ReactionGameEngine(
+    const engine = createEngine(
+        room.gameId,
         room.players.map((p) => ({
             id: p.id,
             nickname: p.nickname,
