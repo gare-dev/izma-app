@@ -19,6 +19,8 @@ import {
     handleAuth,
     handleCreateRoom,
     handleJoinRoom,
+    handleJoinRandom,
+    handleListRooms,
     handleSetReady,
     handleStartGame,
     handlePlayerAction,
@@ -53,6 +55,24 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/games", gamesRouter);
+
+// ─── Public rooms list (REST) ───────────────────────────────────────────────
+
+import { getAllRooms } from "./rooms.ts";
+
+app.get("/api/rooms", (_req, res) => {
+    const publicRooms = getAllRooms()
+        .filter((r) => !r.isPrivate && r.state === "lobby" && r.players.length < r.maxPlayers)
+        .map((r) => ({
+            id: r.id,
+            hostNickname: r.players.find((p) => p.isHost)?.nickname ?? "???",
+            playerCount: r.players.length,
+            maxPlayers: r.maxPlayers,
+            gameIds: r.games.selectedGameIds,
+            state: r.state,
+        }));
+    res.json(publicRooms);
+});
 
 // ─── 404 fallback ───────────────────────────────────────────────────────────
 
@@ -138,6 +158,12 @@ wss.on("connection", (ws: WebSocket) => {
                 break;
             case "JOIN_ROOM":
                 handleJoinRoom(ws, msg.payload);
+                break;
+            case "JOIN_RANDOM":
+                handleJoinRandom(ws, msg.payload);
+                break;
+            case "LIST_ROOMS":
+                handleListRooms(ws);
                 break;
             case "SET_READY":
                 handleSetReady(ws);

@@ -10,6 +10,7 @@ import type {
     PublicUser,
     UpdateProfileDTO,
     Game,
+    PublicRoomInfo,
     ApiError,
 } from "@izma/types";
 
@@ -113,4 +114,10 @@ export async function apiUploadAvatar(file: File): Promise<PublicUser> {
 
 export async function apiGetGames(): Promise<Game[]> {
     return request<Game[]>("/games");
+}
+
+// ─── Rooms ──────────────────────────────────────────────────────────────────
+
+export async function apiGetPublicRooms(): Promise<PublicRoomInfo[]> {
+    return request<PublicRoomInfo[]>("/rooms");
 }

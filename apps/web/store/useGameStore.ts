@@ -1,7 +1,7 @@
 import { create } from "zustand";
-import type { Room, AnyGameState, Game, GameSelectionMode, RoomGameSettings } from "@izma/types";
+import type { Room, AnyGameState, Game, GameSelectionMode, RoomGameSettings, PublicRoomInfo } from "@izma/types";
 import type { ServerMessage, GameResults, ClientMessage } from "@izma/protocol";
-import { apiGetGames } from "@/lib/api";
+import { apiGetGames, apiGetPublicRooms } from "@/lib/api";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,9 @@ interface GameStore {
     // ── Coins notification ────────────────────────────────────────────────────
     lastCoinUpdate: { delta: number; coins: number; reason: string } | null;
 
+    // ── Public rooms ──────────────────────────────────────────────────────────
+    publicRooms: PublicRoomInfo[];
+
     // ── Actions ───────────────────────────────────────────────────────────────
     setNickname: (n: string) => void;
     connect: (onOpen?: () => void) => void;
@@ -45,8 +48,10 @@ interface GameStore {
     toggleGameSelection: (gameId: string) => void;
 
     // ── High-level helpers ────────────────────────────────────────────────────
-    createRoom: (nickname: string, maxPlayers: number, gameSettings?: RoomGameSettings) => void;
+    createRoom: (nickname: string, maxPlayers: number, gameSettings?: RoomGameSettings, isPrivate?: boolean) => void;
     joinRoom: (roomId: string, nickname: string) => void;
+    joinRandomRoom: (nickname: string) => void;
+    fetchPublicRooms: () => Promise<void>;
     setReady: () => void;
     startGame: () => void;
     sendAction: (action: string, data?: unknown) => void;
@@ -89,6 +94,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     selectionMode: "MANUAL",
     gameOrder: [],
     lastCoinUpdate: null,
+    publicRooms: [],
 
     setNickname: (n) => set({ nickname: n }),
 
@@ -166,7 +172,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    createRoom: (nickname, maxPlayers, gameSettings) => {
+    createRoom: (nickname, maxPlayers, gameSettings, isPrivate) => {
         const { connect, send, setNickname, totalRounds, selectionMode, selectedGameIds } = get();
         setNickname(nickname);
         set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null });
@@ -180,7 +186,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         connect(() => {
             send({
                 type: "CREATE_ROOM",
-                payload: { nickname, maxPlayers, gameId: games.selectedGameIds[0] || "reaction", games },
+                payload: { nickname, maxPlayers, gameId: games.selectedGameIds[0] || "reaction", games, isPrivate },
             });
         });
     },
@@ -192,6 +198,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
         connect(() => {
             send({ type: "JOIN_ROOM", payload: { roomId, nickname } });
         });
+    },
+
+    joinRandomRoom: (nickname) => {
+        const { connect, send, setNickname } = get();
+        setNickname(nickname);
+        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null });
+        connect(() => {
+            send({ type: "JOIN_RANDOM", payload: { nickname } });
+        });
+    },
+
+    fetchPublicRooms: async () => {
+        try {
+            const rooms = await apiGetPublicRooms();
+            set({ publicRooms: rooms });
+        } catch {
+            // ignore
+        }
     },
 
     setReady: () => get().send({ type: "SET_READY" }),
@@ -252,6 +276,10 @@ function handleMessage(msg: ServerMessage) {
                     reason: msg.payload.reason,
                 },
             });
+            break;
+
+        case "ROOM_LIST":
+            useGameStore.setState({ publicRooms: msg.payload.rooms });
             break;
     }
 }

@@ -209,6 +209,123 @@
   border-radius: 8px;
 }
 
+/* ── Nickname bar ── */
+.nicknameBar {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* ── Privacy toggle ── */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  transition: border-color 150ms, background 150ms;
+  width: 100%;
+}
+
+.toggle:hover {
+  border-color: var(--primary);
+}
+
+.toggleActive {
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, transparent);
+}
+
+.toggleIcon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.toggleText {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.toggleHint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+/* ── Divider ── */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-subtle);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Room list ── */
+.roomList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.roomCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  transition: border-color 150ms;
+}
+
+.roomCard:hover {
+  border-color: var(--primary);
+}
+
+.roomInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.roomHost {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.roomPlayers {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.emptyRooms {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  padding: 2rem 0;
+}
+
 /* ── Footer ── */
 .footer {
   font-size: 0.78rem;

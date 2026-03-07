@@ -78,11 +78,22 @@ export interface Room {
     players: Player[];
     state: RoomState;
     maxPlayers: number;
+    isPrivate: boolean;
     /** @deprecated use games.selectedGameIds — kept for backward compat */
     gameId: string;
     games: RoomGameSettings;
     currentGameIndex: number;
     gameState: AnyGameState | null;
+}
+
+/** Lightweight room info exposed in the public room list. */
+export interface PublicRoomInfo {
+    id: string;
+    hostNickname: string;
+    playerCount: number;
+    maxPlayers: number;
+    gameIds: string[];
+    state: RoomState;
 }
 
 // ─── Base Game State ────────────────────────────────────────────────────────

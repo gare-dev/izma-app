@@ -48,6 +48,7 @@ export function roomSnapshot(room: LiveRoom): import("@izma/types").Room {
         hostId: room.hostId,
         state: room.state,
         maxPlayers: room.maxPlayers,
+        isPrivate: room.isPrivate,
         gameId: room.gameId,
         games: room.games,
         currentGameIndex: room.currentGameIndex,
