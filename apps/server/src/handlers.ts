@@ -5,6 +5,7 @@ import { createEngine } from "@izma/game-core";
 import {
     getRoom,
     setRoom,
+    getAllRooms,
     broadcast,
     sendTo,
     roomSnapshot,
@@ -92,6 +93,7 @@ export async function handleCreateRoom(
         players: [player],
         state: "lobby",
         maxPlayers: Math.min(Math.max(payload.maxPlayers, 2), 8),
+        isPrivate: !!(payload as any).isPrivate,
         gameId: games.selectedGameIds[0] || "reaction",
         games,
         currentGameIndex: 0,
@@ -268,6 +270,42 @@ export function handlePlayerAction(
     if (!room || !room.engine) return;
 
     room.engine.onPlayerAction(data.id, payload.action, payload.data);
+}
+
+// ─── LIST_ROOMS ─────────────────────────────────────────────────────────────
+
+export function handleListRooms(ws: WebSocket) {
+    const publicRooms = getAllRooms()
+        .filter((r) => !r.isPrivate && r.state === "lobby" && r.players.length < r.maxPlayers);
+
+    const rooms = publicRooms.map((r) => ({
+        id: r.id,
+        hostNickname: r.players.find((p) => p.isHost)?.nickname ?? "???",
+        playerCount: r.players.length,
+        maxPlayers: r.maxPlayers,
+        gameIds: r.games.selectedGameIds,
+        state: r.state as import("@izma/types").RoomState,
+    }));
+
+    ws.send(JSON.stringify({ type: "ROOM_LIST", payload: { rooms } }));
+}
+
+// ─── JOIN_RANDOM ────────────────────────────────────────────────────────────
+
+export function handleJoinRandom(
+    ws: WebSocket,
+    payload: { nickname: string },
+) {
+    const candidates = getAllRooms()
+        .filter((r) => !r.isPrivate && r.state === "lobby" && r.players.length < r.maxPlayers);
+
+    if (candidates.length === 0) {
+        ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Nenhuma sala pública disponível." } }));
+        return;
+    }
+
+    const room = candidates[Math.floor(Math.random() * candidates.length)];
+    handleJoinRoom(ws, { roomId: room.id, nickname: payload.nickname });
 }
 
 // ─── DISCONNECT ─────────────────────────────────────────────────────────────

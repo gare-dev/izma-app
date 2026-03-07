@@ -19,6 +19,8 @@ import {
     handleAuth,
     handleCreateRoom,
     handleJoinRoom,
+    handleJoinRandom,
+    handleListRooms,
     handleSetReady,
     handleStartGame,
     handlePlayerAction,
@@ -54,6 +56,24 @@ app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/games", gamesRouter);
 
+// ─── Public rooms list (REST) ───────────────────────────────────────────────
+
+import { getAllRooms } from "./rooms.ts";
+
+app.get("/api/rooms", (_req, res) => {
+    const publicRooms = getAllRooms()
+        .filter((r) => !r.isPrivate && r.state === "lobby" && r.players.length < r.maxPlayers)
+        .map((r) => ({
+            id: r.id,
+            hostNickname: r.players.find((p) => p.isHost)?.nickname ?? "???",
+            playerCount: r.players.length,
+            maxPlayers: r.maxPlayers,
+            gameIds: r.games.selectedGameIds,
+            state: r.state,
+        }));
+    res.json(publicRooms);
+});
+
 // ─── 404 fallback ───────────────────────────────────────────────────────────
 
 app.use((_req, res) => {
@@ -69,13 +89,26 @@ const server = createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
 import { getWsData, setWsData } from "./ws-data.ts";
+import { verifyToken } from "./modules/auth/jwt.service.ts";
+
+/** Parse cookies from raw Cookie header string. */
+function parseCookies(header?: string): Record<string, string> {
+    const cookies: Record<string, string> = {};
+    if (!header) return cookies;
+    for (const pair of header.split(";")) {
+        const idx = pair.indexOf("=");
+        if (idx < 1) continue;
+        cookies[pair.slice(0, idx).trim()] = decodeURIComponent(pair.slice(idx + 1).trim());
+    }
+    return cookies;
+}
 
 // Handle upgrade requests
 server.on("upgrade", (req, socket, head) => {
     const url = new URL(req.url ?? "/", `http://${req.headers.host}`);
 
     if (url.pathname === "/ws" || url.pathname === "/ws/") {
-        wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.handleUpgrade(req, socket, head, async (ws) => {
             const data: WsData = {
                 id: uuid(),
                 roomId: null,
@@ -83,6 +116,20 @@ server.on("upgrade", (req, socket, head) => {
                 username: null,
                 isGuest: true,
             };
+
+            // Auto-authenticate from accessToken cookie
+            const cookies = parseCookies(req.headers.cookie);
+            const token = cookies.accessToken;
+            if (token) {
+                const payload = await verifyToken(token);
+                if (payload) {
+                    data.userId = payload.sub;
+                    data.username = payload.username;
+                    data.isGuest = payload.isGuest;
+                    console.log(`[ws] auto-authenticated ${payload.username} from cookie`);
+                }
+            }
+
             setWsData(ws, data);
             wss.emit("connection", ws, req);
         });
@@ -111,6 +158,12 @@ wss.on("connection", (ws: WebSocket) => {
                 break;
             case "JOIN_ROOM":
                 handleJoinRoom(ws, msg.payload);
+                break;
+            case "JOIN_RANDOM":
+                handleJoinRandom(ws, msg.payload);
+                break;
+            case "LIST_ROOMS":
+                handleListRooms(ws);
                 break;
             case "SET_READY":
                 handleSetReady(ws);

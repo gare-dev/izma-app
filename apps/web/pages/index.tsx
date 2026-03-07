@@ -9,33 +9,29 @@ import AuthModal from "@/components/auth/AuthModal";
 import GameSelection from "@/components/games/GameSelection";
 import styles from "@/styles/Home.module.css";
 
-type Tab = "create" | "join";
+type Tab = "create" | "join" | "browse";
 
 export default function HomePage() {
   const router = useRouter();
-  const { createRoom, joinRoom, room, error, clearError, status } = useGameStore();
-  const { user, token, hydrate, fetchProfile } = useAuthStore();
+  const { createRoom, joinRoom, joinRandomRoom, fetchPublicRooms, publicRooms, room, error, clearError, status } = useGameStore();
+  const { user, checkAuth } = useAuthStore();
 
   const [tab, setTab] = useState<Tab>("create");
   const [nickname, setNickname] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [roomCode, setRoomCode] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
 
-  // Hydrate auth store from localStorage on mount
+  // Check auth status from cookie on mount
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
-
-  // Fetch fresh profile (coins, etc.) every time the page loads
-  useEffect(() => {
-    if (token) fetchProfile();
-  }, [token, fetchProfile]);
+    checkAuth();
+  }, [checkAuth]);
 
   // Always sync nickname from authenticated user
-  const isLoggedIn = !!user && !!token;
+  const isLoggedIn = !!user;
   useEffect(() => {
     if (user) {
       setNickname(user.username);
@@ -63,6 +59,14 @@ export default function HomePage() {
     if (error) setLoading(false);
   }, [error]);
 
+  // Fetch public rooms when browse tab is active (poll every 5s)
+  useEffect(() => {
+    if (tab !== "browse") return;
+    fetchPublicRooms();
+    const interval = setInterval(fetchPublicRooms, 5000);
+    return () => clearInterval(interval);
+  }, [tab, fetchPublicRooms]);
+
   function validate(): boolean {
     setFieldError(null);
     if (!nickname.trim()) { setFieldError("Digite seu apelido."); return false; }
@@ -76,10 +80,24 @@ export default function HomePage() {
     setLoading(true);
     clearError();
     if (tab === "create") {
-      createRoom(nickname.trim(), maxPlayers);
-    } else {
+      createRoom(nickname.trim(), maxPlayers, undefined, isPrivate);
+    } else if (tab === "join") {
       joinRoom(roomCode.trim().toUpperCase(), nickname.trim());
     }
+  }
+
+  function handleJoinRandom() {
+    if (!nickname.trim()) { setFieldError("Digite seu apelido."); return; }
+    setLoading(true);
+    clearError();
+    joinRandomRoom(nickname.trim());
+  }
+
+  function handleJoinBrowsed(roomId: string) {
+    if (!nickname.trim()) { setFieldError("Digite seu apelido."); return; }
+    setLoading(true);
+    clearError();
+    joinRoom(roomId, nickname.trim());
   }
 
   const isConnecting = loading || status === "connecting";
@@ -104,9 +122,13 @@ export default function HomePage() {
             >
               {isLoggedIn ? (
                 <>
-                  <span className={styles.profileAvatar}>
-                    {user.username[0]?.toUpperCase() ?? "?"}
-                  </span>
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" className={styles.profileAvatar} />
+                  ) : (
+                    <span className={styles.profileAvatar}>
+                      {user.username[0]?.toUpperCase() ?? "?"}
+                    </span>
+                  )}
                   <span className={styles.profileCoins}>🪙 {user.coins}</span>
                 </>
               ) : (
@@ -118,19 +140,11 @@ export default function HomePage() {
         </header>
 
         <main className={styles.main}>
-          <div className={styles.tabs}>
-            <button className={[styles.tab, tab === "create" ? styles.activeTab : ""].filter(Boolean).join(" ")} onClick={() => setTab("create")} type="button">
-              Criar Sala
-            </button>
-            <button className={[styles.tab, tab === "join" ? styles.activeTab : ""].filter(Boolean).join(" ")} onClick={() => setTab("join")} type="button">
-              Entrar com Código
-            </button>
-          </div>
-
-          <form className={styles.form} onSubmit={handleSubmit} noValidate>
+          {/* ── Nickname (always visible) ── */}
+          <div className={styles.nicknameBar}>
             <Input
               id="nickname"
-              label={isLoggedIn ? `Jogando como` : "Seu apelido"}
+              label={isLoggedIn ? "Jogando como" : "Seu apelido"}
               placeholder="Ex: Thunderbolt"
               value={nickname}
               onChange={(e) => { if (!isLoggedIn) setNickname(e.target.value); }}
@@ -141,24 +155,67 @@ export default function HomePage() {
               title={isLoggedIn ? "Seu nome de usuário é usado automaticamente" : undefined}
               style={isLoggedIn ? { opacity: 0.7, cursor: "not-allowed" } : undefined}
             />
+          </div>
 
-            {tab === "create" && (
-              <>
-                <div className={styles.field}>
-                  <span className={styles.label}>Máximo de jogadores</span>
-                  <div className={styles.stepper}>
-                    <button type="button" className={styles.step} onClick={() => setMaxPlayers((n) => Math.max(2, n - 1))} disabled={maxPlayers <= 2}>−</button>
-                    <span className={styles.stepValue}>{maxPlayers}</span>
-                    <button type="button" className={styles.step} onClick={() => setMaxPlayers((n) => Math.min(8, n + 1))} disabled={maxPlayers >= 8}>+</button>
-                  </div>
+          {/* ── Tabs ── */}
+          <div className={styles.tabs}>
+            <button className={[styles.tab, tab === "create" ? styles.activeTab : ""].filter(Boolean).join(" ")} onClick={() => setTab("create")} type="button">
+              Criar Sala
+            </button>
+            <button className={[styles.tab, tab === "join" ? styles.activeTab : ""].filter(Boolean).join(" ")} onClick={() => setTab("join")} type="button">
+              Entrar
+            </button>
+            <button className={[styles.tab, tab === "browse" ? styles.activeTab : ""].filter(Boolean).join(" ")} onClick={() => setTab("browse")} type="button">
+              Salas Abertas
+            </button>
+          </div>
+
+          {/* ── Create room ── */}
+          {tab === "create" && (
+            <form className={styles.form} onSubmit={handleSubmit} noValidate>
+              <div className={styles.field}>
+                <span className={styles.label}>Máximo de jogadores</span>
+                <div className={styles.stepper}>
+                  <button type="button" className={styles.step} onClick={() => setMaxPlayers((n) => Math.max(2, n - 1))} disabled={maxPlayers <= 2}>−</button>
+                  <span className={styles.stepValue}>{maxPlayers}</span>
+                  <button type="button" className={styles.step} onClick={() => setMaxPlayers((n) => Math.min(8, n + 1))} disabled={maxPlayers >= 8}>+</button>
                 </div>
+              </div>
 
-                {/* ── Game selection ── */}
-                <GameSelection />
-              </>
-            )}
+              <GameSelection />
 
-            {tab === "join" && (
+              {/* ── Privacy toggle ── */}
+              <button
+                type="button"
+                className={[styles.toggle, isPrivate ? styles.toggleActive : ""].filter(Boolean).join(" ")}
+                onClick={() => setIsPrivate((v) => !v)}
+              >
+                <span className={styles.toggleIcon}>{isPrivate ? "🔒" : "🌐"}</span>
+                <span className={styles.toggleText}>
+                  {isPrivate ? "Sala Privada" : "Sala Pública"}
+                </span>
+                <span className={styles.toggleHint}>
+                  {isPrivate ? "Só entra com o link" : "Visível para todos"}
+                </span>
+              </button>
+
+              {(fieldError ?? error) && (
+                <p className={styles.errorMsg} onClick={() => { setFieldError(null); clearError(); }}>
+                  ⚠ {fieldError ?? error}
+                </p>
+              )}
+
+              <Button type="submit" variant="primary" size="lg" fullWidth disabled={isConnecting}>
+                {isConnecting
+                  ? <><span className="spinner" style={{ marginRight: "0.5rem" }} /> Conectando…</>
+                  : "🚀 Criar Sala"}
+              </Button>
+            </form>
+          )}
+
+          {/* ── Join by code / random ── */}
+          {tab === "join" && (
+            <div className={styles.form}>
               <Input
                 id="roomCode"
                 label="Código da sala"
@@ -168,20 +225,83 @@ export default function HomePage() {
                 maxLength={8}
                 autoComplete="off"
               />
-            )}
 
-            {(fieldError ?? error) && (
-              <p className={styles.errorMsg} onClick={() => { setFieldError(null); clearError(); }}>
-                ⚠ {fieldError ?? error}
-              </p>
-            )}
+              {(fieldError ?? error) && (
+                <p className={styles.errorMsg} onClick={() => { setFieldError(null); clearError(); }}>
+                  ⚠ {fieldError ?? error}
+                </p>
+              )}
 
-            <Button type="submit" variant="primary" size="lg" fullWidth disabled={isConnecting}>
-              {isConnecting
-                ? <><span className="spinner" style={{ marginRight: "0.5rem" }} /> Conectando…</>
-                : tab === "create" ? "🚀 Criar Sala" : "🚪 Entrar na Sala"}
-            </Button>
-          </form>
+              <Button
+                type="button"
+                variant="primary"
+                size="lg"
+                fullWidth
+                disabled={isConnecting}
+                onClick={(e) => {
+                  // wrap in a form submit equivalent
+                  const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                  handleSubmit(fakeEvent);
+                }}
+              >
+                {isConnecting
+                  ? <><span className="spinner" style={{ marginRight: "0.5rem" }} /> Conectando…</>
+                  : "🚪 Entrar na Sala"}
+              </Button>
+
+              <div className={styles.divider}>
+                <span>ou</span>
+              </div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                fullWidth
+                disabled={isConnecting}
+                onClick={handleJoinRandom}
+              >
+                🎲 Sala Aleatória
+              </Button>
+            </div>
+          )}
+
+          {/* ── Browse public rooms ── */}
+          {tab === "browse" && (
+            <div className={styles.form}>
+              {(fieldError ?? error) && (
+                <p className={styles.errorMsg} onClick={() => { setFieldError(null); clearError(); }}>
+                  ⚠ {fieldError ?? error}
+                </p>
+              )}
+
+              {publicRooms.length === 0 ? (
+                <p className={styles.emptyRooms}>Nenhuma sala pública aberta no momento.</p>
+              ) : (
+                <ul className={styles.roomList}>
+                  {publicRooms.map((r) => (
+                    <li key={r.id} className={styles.roomCard}>
+                      <div className={styles.roomInfo}>
+                        <span className={styles.roomHost}>{r.hostNickname}</span>
+                        <span className={styles.roomPlayers}>
+                          👥 {r.playerCount}/{r.maxPlayers}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        disabled={isConnecting}
+                        onClick={() => handleJoinBrowsed(r.id)}
+                      >
+                        Entrar
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </main>
 
         <footer className={styles.footer}>

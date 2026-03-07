@@ -3,7 +3,7 @@
 // Uses PostgreSQL via `pg` Pool for all user data.
 
 import { v4 as uuid } from "uuid";
-import type { User, GuestUser, PublicUser, RegisterDTO, LoginDTO, GuestDTO, AuthResponse } from "@izma/types";
+import type { User, GuestUser, PublicUser, RegisterDTO, LoginDTO, GuestDTO } from "@izma/types";
 import { hashPassword, comparePassword } from "./password.service.ts";
 import { signToken, signRefreshToken, verifyToken, invalidateToken, revokeRefreshToken } from "./jwt.service.ts";
 import { isValidEmail, isNonEmptyString, sanitize, type ValidationResult, fail, ok } from "../../utils/validation.ts";
@@ -49,7 +49,7 @@ export function validateGuest(dto: GuestDTO): ValidationResult {
 
 // ─── Service functions ──────────────────────────────────────────────────────
 
-export async function register(dto: RegisterDTO): Promise<{ auth: AuthResponse; refreshToken: string }> {
+export async function register(dto: RegisterDTO): Promise<{ user: PublicUser; accessToken: string; refreshToken: string }> {
     const id = uuid();
     const username = sanitize(dto.username.trim(), 20);
     const email = dto.email.trim().toLowerCase();
@@ -68,16 +68,10 @@ export async function register(dto: RegisterDTO): Promise<{ auth: AuthResponse; 
     const accessToken = await signToken(id, username, false);
     const refreshToken = await signRefreshToken(id, username, false);
 
-    return {
-        auth: {
-            user: toPublicUser(user),
-            accessToken,
-        },
-        refreshToken,
-    };
+    return { user: toPublicUser(user), accessToken, refreshToken };
 }
 
-export async function login(dto: LoginDTO): Promise<{ auth: AuthResponse; refreshToken: string } | null> {
+export async function login(dto: LoginDTO): Promise<{ user: PublicUser; accessToken: string; refreshToken: string } | null> {
     const result = await query(
         `SELECT id, username, email, password_hash, avatar_url, bio, coins, is_guest, created_at
          FROM users
@@ -96,16 +90,10 @@ export async function login(dto: LoginDTO): Promise<{ auth: AuthResponse; refres
     const accessToken = await signToken(user.id, user.username, false);
     const refreshToken = await signRefreshToken(user.id, user.username, false);
 
-    return {
-        auth: {
-            user: toPublicUser(user),
-            accessToken,
-        },
-        refreshToken,
-    };
+    return { user: toPublicUser(user), accessToken, refreshToken };
 }
 
-export async function createGuest(dto: GuestDTO): Promise<{ auth: AuthResponse }> {
+export async function createGuest(dto: GuestDTO): Promise<{ user: GuestUser; accessToken: string }> {
     const id = uuid();
     const username = sanitize(dto.username.trim(), 20) || `Guest${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
@@ -120,15 +108,10 @@ export async function createGuest(dto: GuestDTO): Promise<{ auth: AuthResponse }
 
     const accessToken = await signToken(id, username, true);
 
-    return {
-        auth: {
-            user: guest,
-            accessToken,
-        },
-    };
+    return { user: guest, accessToken };
 }
 
-export async function refreshAccessToken(refreshTokenStr: string): Promise<AuthResponse | null> {
+export async function refreshAccessToken(refreshTokenStr: string): Promise<{ user: PublicUser; accessToken: string } | null> {
     const payload = await verifyToken(refreshTokenStr);
     if (!payload) return null;
     if (payload.isGuest) return null; // guests don't get refresh
@@ -162,7 +145,7 @@ export async function getUserById(id: string): Promise<User | undefined> {
 
 export async function updateUser(
     id: string,
-    patch: Partial<Pick<User, "avatarUrl" | "bio">>,
+    patch: Partial<Pick<User, "avatarUrl" | "bio" | "username">>,
 ): Promise<User | undefined> {
     const fields: string[] = [];
     const values: unknown[] = [];
@@ -175,6 +158,10 @@ export async function updateUser(
     if (patch.bio !== undefined) {
         fields.push(`bio = $${idx++}`);
         values.push(patch.bio);
+    }
+    if (patch.username !== undefined) {
+        fields.push(`username = $${idx++}`);
+        values.push(patch.username);
     }
 
     if (fields.length === 0) return getUserById(id);

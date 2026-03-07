@@ -1,10 +1,12 @@
-import type { Room, AnyGameState, RoomGameSettings } from "@izma/types";
+import type { Room, AnyGameState, RoomGameSettings, PublicRoomInfo } from "@izma/types";
 
 // ─── Client → Server ───────────────────────────────────────────────────────
 
 export type ClientMessage =
-    | { type: "CREATE_ROOM"; payload: { nickname: string; maxPlayers: number; gameId: string; games: RoomGameSettings } }
+    | { type: "CREATE_ROOM"; payload: { nickname: string; maxPlayers: number; gameId: string; games: RoomGameSettings; isPrivate?: boolean } }
     | { type: "JOIN_ROOM"; payload: { roomId: string; nickname: string } }
+    | { type: "JOIN_RANDOM"; payload: { nickname: string } }
+    | { type: "LIST_ROOMS" }
     | { type: "SET_READY" }
     | { type: "START_GAME" }
     | { type: "PLAYER_ACTION"; payload: { action: string; data?: unknown } }
@@ -38,7 +40,9 @@ export type ServerMessage =
     /** Sent once after START_GAME so every client knows the planned game order */
     | { type: "ROOM_GAMES_DEFINED"; payload: { totalRounds: number; gameOrder: string[] } }
     /** Notifies coin reward at end of match */
-    | { type: "COINS_UPDATE"; payload: { userId: string; coins: number; delta: number; reason: string } };
+    | { type: "COINS_UPDATE"; payload: { userId: string; coins: number; delta: number; reason: string } }
+    /** List of public rooms in lobby state */
+    | { type: "ROOM_LIST"; payload: { rooms: PublicRoomInfo[] } };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

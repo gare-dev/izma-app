@@ -20,8 +20,12 @@ declare global {
     }
 }
 
-/** Extract the Bearer token from the Authorization header. */
+/** Extract the access token from cookie (primary) or Authorization header (fallback). */
 function extractToken(req: Request): string | null {
+    // 1. HttpOnly cookie (primary — set by auth controller)
+    const cookieToken = req.cookies?.accessToken;
+    if (cookieToken) return cookieToken;
+    // 2. Authorization header (fallback — kept for non-browser clients)
     const header = req.headers.authorization;
     if (!header?.startsWith("Bearer ")) return null;
     return header.slice(7);

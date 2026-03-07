@@ -35,10 +35,10 @@ export default function RoomPage() {
         sendAction,
     } = useGameStore();
 
-    const { hydrate } = useAuthStore();
+    // const { hydrate } = useAuthStore();
 
     // Hydrate auth store
-    useEffect(() => { hydrate(); }, [hydrate]);
+    // useEffect(() => { hydrate(); }, [hydrate]);
 
     // If user arrives via share link without being connected
     const [joinNickname, setJoinNickname] = useState("");
