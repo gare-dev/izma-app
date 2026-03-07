@@ -71,6 +71,7 @@
   font-weight: 800;
   font-size: 0.8rem;
   flex-shrink: 0;
+  object-fit: cover;
 }
 
 .profileCoins {

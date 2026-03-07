@@ -1,5 +1,6 @@
 // ─── API Client ─────────────────────────────────────────────────────────────
 // Centralises all REST calls to the server.
+// Auth tokens are handled via HttpOnly cookies — no token params needed.
 
 import type {
     RegisterDTO,
@@ -26,18 +27,16 @@ function getBaseUrl(): string {
 async function request<T>(
     path: string,
     options: RequestInit = {},
-    token?: string | null,
 ): Promise<T> {
     const headers: Record<string, string> = {
         "Content-Type": "application/json",
         ...(options.headers as Record<string, string> | undefined),
     };
-    if (token) headers.Authorization = `Bearer ${token}`;
 
     const res = await fetch(`${getBaseUrl()}${path}`, {
         ...options,
         headers,
-        credentials: "include", // for refresh-token cookie
+        credentials: "include",
     });
 
     if (!res.ok) {
@@ -75,22 +74,39 @@ export async function apiRefreshToken(): Promise<AuthResponse> {
     return request<AuthResponse>("/auth/refresh", { method: "POST" });
 }
 
-export async function apiLogout(token: string): Promise<void> {
-    await request<{ ok: boolean }>("/auth/logout", { method: "POST" }, token);
+export async function apiLogout(): Promise<void> {
+    await request<{ ok: boolean }>("/auth/logout", { method: "POST" });
 }
 
 // ─── Users ──────────────────────────────────────────────────────────────────
 
-export async function apiGetMe(token: string): Promise<PublicUser> {
-    return request<PublicUser>("/users/me", {}, token);
+export async function apiGetMe(): Promise<PublicUser> {
+    return request<PublicUser>("/users/me");
 }
 
-export async function apiUpdateMe(token: string, dto: UpdateProfileDTO): Promise<PublicUser> {
+export async function apiUpdateMe(dto: UpdateProfileDTO): Promise<PublicUser> {
     return request<PublicUser>(
         "/users/me",
         { method: "PATCH", body: JSON.stringify(dto) },
-        token,
     );
+}
+
+export async function apiUploadAvatar(file: File): Promise<PublicUser> {
+    const form = new FormData();
+    form.append("avatar", file);
+
+    const res = await fetch(`${getBaseUrl()}/users/me/avatar`, {
+        method: "POST",
+        body: form,
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as ApiError | null;
+        throw new Error(body?.message ?? `HTTP ${res.status}`);
+    }
+
+    return res.json() as Promise<PublicUser>;
 }
 
 // ─── Games ──────────────────────────────────────────────────────────────────

@@ -14,7 +14,7 @@ type Tab = "create" | "join";
 export default function HomePage() {
   const router = useRouter();
   const { createRoom, joinRoom, room, error, clearError, status } = useGameStore();
-  const { user, token, hydrate, fetchProfile } = useAuthStore();
+  const { user, checkAuth } = useAuthStore();
 
   const [tab, setTab] = useState<Tab>("create");
   const [nickname, setNickname] = useState("");
@@ -24,18 +24,13 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
 
-  // Hydrate auth store from localStorage on mount
+  // Check auth status from cookie on mount
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
-
-  // Fetch fresh profile (coins, etc.) every time the page loads
-  useEffect(() => {
-    if (token) fetchProfile();
-  }, [token, fetchProfile]);
+    checkAuth();
+  }, [checkAuth]);
 
   // Always sync nickname from authenticated user
-  const isLoggedIn = !!user && !!token;
+  const isLoggedIn = !!user;
   useEffect(() => {
     if (user) {
       setNickname(user.username);
@@ -104,9 +99,13 @@ export default function HomePage() {
             >
               {isLoggedIn ? (
                 <>
-                  <span className={styles.profileAvatar}>
-                    {user.username[0]?.toUpperCase() ?? "?"}
-                  </span>
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" className={styles.profileAvatar} />
+                  ) : (
+                    <span className={styles.profileAvatar}>
+                      {user.username[0]?.toUpperCase() ?? "?"}
+                    </span>
+                  )}
                   <span className={styles.profileCoins}>🪙 {user.coins}</span>
                 </>
               ) : (

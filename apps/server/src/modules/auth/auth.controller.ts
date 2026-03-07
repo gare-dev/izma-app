@@ -1,5 +1,6 @@
 // ─── Auth Controller ────────────────────────────────────────────────────────
 // Express request handlers for auth endpoints.
+// All tokens (access + refresh) are set as HttpOnly cookies — never in the response body.
 
 import type { Request, Response } from "express";
 import type { RegisterDTO, LoginDTO, GuestDTO } from "@izma/types";
@@ -14,6 +15,32 @@ import {
     refreshAccessToken,
     logout,
 } from "./auth.service.ts";
+
+// ─── Cookie helpers ─────────────────────────────────────────────────────────
+
+const COOKIE_OPTS = {
+    httpOnly: true,
+    sameSite: "strict" as const,
+    path: "/",
+};
+
+function setAuthCookies(res: Response, accessToken: string, refreshToken?: string) {
+    res.cookie("accessToken", accessToken, {
+        ...COOKIE_OPTS,
+        maxAge: 7_200_000, // 2 h (matches JWT expiry)
+    });
+    if (refreshToken) {
+        res.cookie("refreshToken", refreshToken, {
+            ...COOKIE_OPTS,
+            maxAge: 604_800_000, // 7 days
+        });
+    }
+}
+
+function clearAuthCookies(res: Response) {
+    res.cookie("accessToken", "", { ...COOKIE_OPTS, maxAge: 0 });
+    res.cookie("refreshToken", "", { ...COOKIE_OPTS, maxAge: 0 });
+}
 
 // ─── POST /auth/register ────────────────────────────────────────────────────
 
@@ -31,16 +58,8 @@ export async function handleRegister(req: Request, res: Response): Promise<void>
     }
 
     const result = await register(body);
-
-    // Set refresh token as HttpOnly cookie
-    res.cookie("refreshToken", result.refreshToken, {
-        httpOnly: true,
-        sameSite: "strict",
-        path: "/auth/refresh",
-        maxAge: 604800_000, // 7 days in ms
-    });
-
-    res.status(201).json(result.auth);
+    setAuthCookies(res, result.accessToken, result.refreshToken);
+    res.status(201).json({ user: result.user });
 }
 
 // ─── POST /auth/login ───────────────────────────────────────────────────────
@@ -64,22 +83,18 @@ export async function handleLogin(req: Request, res: Response): Promise<void> {
         return;
     }
 
-    res.status(200).cookie("refreshToken", result.refreshToken, {
-        httpOnly: true,
-        sameSite: "strict",
-        path: "/auth/refresh",
-        maxAge: 604800_000,
-    }).json(result.auth);
+    setAuthCookies(res, result.accessToken, result.refreshToken);
+    res.status(200).json({ user: result.user });
 
     // Cache session in Redis (TTL = 2h = 7200s)
     await redis.set(
-        `session:${result.auth.user.id}`,
+        `session:${result.user.id}`,
         JSON.stringify({
-            id: result.auth.user.id,
-            username: result.auth.user.username,
-            avatarUrl: result.auth.user.avatarUrl,
-            bio: result.auth.user.bio,
-            coins: result.auth.user.coins,
+            id: result.user.id,
+            username: result.user.username,
+            avatarUrl: result.user.avatarUrl,
+            bio: result.user.bio,
+            coins: result.user.coins,
         }),
         "EX",
         7200,
@@ -102,13 +117,13 @@ export async function handleGuest(req: Request, res: Response): Promise<void> {
     }
 
     const result = await createGuest(body);
-    res.status(201).json(result.auth);
+    setAuthCookies(res, result.accessToken);
+    res.status(201).json({ user: result.user });
 }
 
 // ─── POST /auth/refresh ─────────────────────────────────────────────────────
 
 export async function handleRefresh(req: Request, res: Response): Promise<void> {
-    // Read from cookie (cookie-parser populates req.cookies)
     const refreshToken = req.cookies?.refreshToken;
     if (!refreshToken) {
         res.status(401).json({ statusCode: 401, error: "Unauthorized", message: "Refresh token ausente." });
@@ -121,14 +136,14 @@ export async function handleRefresh(req: Request, res: Response): Promise<void> 
         return;
     }
 
-    res.status(200).json(result);
+    setAuthCookies(res, result.accessToken);
+    res.status(200).json({ user: result.user });
 }
 
 // ─── POST /auth/logout ──────────────────────────────────────────────────────
 
 export async function handleLogout(req: Request, res: Response): Promise<void> {
-    const authHeader = req.headers.authorization;
-    const accessToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const accessToken = req.cookies?.accessToken ?? null;
     const refreshToken = req.cookies?.refreshToken;
 
     if (accessToken) {
@@ -139,13 +154,6 @@ export async function handleLogout(req: Request, res: Response): Promise<void> {
         }
     }
 
-    // Clear refresh token cookie
-    res.cookie("refreshToken", "", {
-        httpOnly: true,
-        sameSite: "strict",
-        path: "/auth/refresh",
-        maxAge: 0,
-    });
-
+    clearAuthCookies(res);
     res.status(200).json({ ok: true });
 }

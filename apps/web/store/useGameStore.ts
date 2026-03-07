@@ -132,14 +132,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ws.onopen = () => {
             set({ status: "connected" });
 
-            // Send auth token over WS if available
-            if (typeof window !== "undefined") {
-                const token = localStorage.getItem("izma_token");
-                if (token) {
-                    ws.send(JSON.stringify({ type: "AUTH", payload: { token } }));
-                }
-            }
-
+            // Auth is handled via cookies on the WS upgrade request
             onOpen?.();
         };
 

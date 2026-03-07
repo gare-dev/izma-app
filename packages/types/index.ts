@@ -127,12 +127,12 @@ export interface GuestDTO {
 
 export interface AuthResponse {
     user: PublicUser | GuestUser;
-    accessToken: string;
 }
 
 // ─── User DTOs ─────────────────────────────────────────────────────────────
 
 export interface UpdateProfileDTO {
+    username?: string;
     avatarUrl?: string;
     bio?: string;
 }

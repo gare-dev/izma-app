@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -12,8 +12,12 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ open, onClose }: AuthModalProps) {
-    const { user, token, loading, error, login, register, loginAsGuest, logout, clearError } =
-        useAuthStore();
+    const {
+        user, loading, error,
+        login, register, loginAsGuest, logout,
+        updateProfile, uploadAvatar,
+        clearError,
+    } = useAuthStore();
 
     const [tab, setTab] = useState<AuthTab>("login");
     const [username, setUsername] = useState("");
@@ -22,14 +26,61 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
     const [guestName, setGuestName] = useState("");
     const [fieldError, setFieldError] = useState<string | null>(null);
 
+    // ── Profile edit state ──────────────────────────────────────────────
+    const [editName, setEditName] = useState("");
+    const [editBio, setEditBio] = useState("");
+    const [editing, setEditing] = useState(false);
+    const [successMsg, setSuccessMsg] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     const reset = useCallback(() => {
         setFieldError(null);
         clearError();
+        setSuccessMsg(null);
     }, [clearError]);
 
     function switchTab(t: AuthTab) {
         setTab(t);
         reset();
+    }
+
+    function startEditing() {
+        if (!user) return;
+        setEditName(user.username);
+        setEditBio(user.bio ?? "");
+        setEditing(true);
+        reset();
+    }
+
+    async function saveProfile() {
+        reset();
+        const trimmedName = editName.trim();
+        if (trimmedName.length < 3) {
+            setFieldError("Username deve ter no mínimo 3 caracteres.");
+            return;
+        }
+        const patch: { username?: string; bio?: string } = {};
+        if (trimmedName !== user?.username) patch.username = trimmedName;
+        if (editBio.trim() !== (user?.bio ?? "")) patch.bio = editBio.trim();
+
+        if (Object.keys(patch).length === 0) {
+            setEditing(false);
+            return;
+        }
+
+        await updateProfile(patch);
+        setEditing(false);
+        setSuccessMsg("Perfil atualizado!");
+        setTimeout(() => setSuccessMsg(null), 2500);
+    }
+
+    async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        reset();
+        await uploadAvatar(file);
+        setSuccessMsg("Avatar atualizado!");
+        setTimeout(() => setSuccessMsg(null), 2500);
     }
 
     async function handleLogin(e: React.FormEvent) {
@@ -68,8 +119,10 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
 
     if (!open) return null;
 
+    const isGuest = !!user && "isGuest" in user && user.isGuest;
+
     // ── Logged in state ────────────────────────────────────────────────────
-    if (user && token) {
+    if (user) {
         return (
             <div className={styles.overlay} onClick={onClose}>
                 <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -80,14 +133,49 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
                         <h3 className={styles.title}>Meu Perfil</h3>
                     </div>
 
+                    {(fieldError ?? error) && (
+                        <p className={styles.errorMsg}>{fieldError ?? error}</p>
+                    )}
+                    {successMsg && <p className={styles.successMsg}>{successMsg}</p>}
+
                     <div className={styles.userBar}>
-                        <span className={styles.userAvatar}>
-                            {user.username[0]?.toUpperCase() ?? "?"}
-                        </span>
+                        {/* Avatar — click to change */}
+                        {!isGuest ? (
+                            <div
+                                className={styles.avatarWrapper}
+                                onClick={() => fileInputRef.current?.click()}
+                                title="Clique para trocar o avatar"
+                            >
+                                {user.avatarUrl ? (
+                                    <img
+                                        src={user.avatarUrl}
+                                        alt="avatar"
+                                        className={styles.avatarImg}
+                                    />
+                                ) : (
+                                    <span className={styles.userAvatar}>
+                                        {user.username[0]?.toUpperCase() ?? "?"}
+                                    </span>
+                                )}
+                                <span className={styles.avatarOverlay}>✎</span>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    hidden
+                                    onChange={handleAvatarChange}
+                                />
+                            </div>
+                        ) : (
+                            <span className={styles.userAvatar}>
+                                {user.username[0]?.toUpperCase() ?? "?"}
+                            </span>
+                        )}
+
                         <div className={styles.userInfo}>
                             <span className={styles.userName}>
                                 {user.username}
-                                {"isGuest" in user && user.isGuest && (
+                                {isGuest && (
                                     <span className={styles.guestBadge}> convidado</span>
                                 )}
                             </span>
@@ -95,10 +183,52 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
                         </div>
                     </div>
 
-                    {user.bio && (
-                        <p style={{ fontSize: "0.88rem", color: "var(--text-muted)" }}>
-                            {user.bio}
-                        </p>
+                    {/* ── Editing mode ── */}
+                    {editing && !isGuest ? (
+                        <div className={styles.editSection}>
+                            <div className={styles.editRow}>
+                                <label className={styles.editLabel}>Nome de usuário</label>
+                                <input
+                                    className={styles.editInput}
+                                    value={editName}
+                                    onChange={(e) => setEditName(e.target.value)}
+                                    maxLength={20}
+                                />
+                            </div>
+                            <div className={styles.editRow}>
+                                <label className={styles.editLabel}>Bio</label>
+                                <textarea
+                                    className={styles.editInput}
+                                    value={editBio}
+                                    onChange={(e) => setEditBio(e.target.value)}
+                                    maxLength={200}
+                                    rows={3}
+                                    placeholder="Conte sobre você..."
+                                />
+                            </div>
+                            <div className={styles.editActions}>
+                                <Button variant="primary" fullWidth onClick={saveProfile} disabled={loading}>
+                                    {loading ? "Salvando…" : "Salvar"}
+                                </Button>
+                                <Button variant="ghost" fullWidth onClick={() => { setEditing(false); reset(); }}>
+                                    Cancelar
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {user.bio && (
+                                <p style={{ fontSize: "0.88rem", color: "var(--text-muted)" }}>
+                                    {user.bio}
+                                </p>
+                            )}
+
+                            {!isGuest && (
+                                <Button variant="secondary" fullWidth onClick={startEditing}>
+                                    Editar Perfil
+                                </Button>
+                            )}
+                        </>
                     )}
 
                     <Button variant="ghost" fullWidth onClick={() => { logout(); onClose(); }}>
