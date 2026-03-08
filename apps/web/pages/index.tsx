@@ -112,78 +112,102 @@ export default function HomePage() {
       </Head>
 
       <div className={styles.page}>
-        <header className={styles.hero}>
-          <div className={styles.heroTop}>
-            <div className={styles.logo}>⚡ IZMA</div>
-            <div className={styles.heroActions}>
-              <button
-                type="button"
-                className={styles.rankingsBtn}
-                onClick={() => router.push("/rankings")}
-              >
-                🏆 Rankings
-              </button>
-              <button
-                className={styles.profileBtn}
-                onClick={() => setAuthOpen(true)}
-                type="button"
-              >
-                {isLoggedIn ? (
-                  <>
-                    {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt="" className={styles.profileAvatar} />
-                    ) : (
-                      <span className={styles.profileAvatar}>
-                        {user.username[0]?.toUpperCase() ?? "?"}
-                      </span>
-                    )}
-                    <span className={styles.profileCoins}>🪙 {user.coins}</span>
-                  </>
-                ) : (
-                  "Entrar"
-                )}
-              </button>
+        {/* ── Top bar ── */}
+        <nav className={styles.topBar}>
+          <button type="button" className={styles.iconBtn} onClick={() => router.push("/rankings")} aria-label="Rankings">
+            🏆
+          </button>
+          <div className={styles.logo}>⚡ IZMA</div>
+          <button type="button" className={styles.profileBtn} onClick={() => setAuthOpen(true)} aria-label="Perfil">
+            {isLoggedIn ? (
+              user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className={styles.avatarImg} />
+              ) : (
+                <span className={styles.avatarFallback}>{user.username[0]?.toUpperCase() ?? "?"}</span>
+              )
+            ) : (
+              <span className={styles.avatarFallback}>👤</span>
+            )}
+          </button>
+        </nav>
+
+        {/* ── Welcome section ── */}
+        <header className={styles.welcome}>
+          {isLoggedIn ? (
+            <>
+              <span className={styles.greeting}>Olá, <strong>{user.username}</strong></span>
+              <span className={styles.coins}>🪙 {user.coins} moedas</span>
+            </>
+          ) : (
+            <div className={styles.guestNickname}>
+              <Input
+                id="nickname"
+                label="Seu apelido"
+                placeholder="Ex: Thunderbolt"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                maxLength={20}
+                autoComplete="off"
+                autoFocus
+              />
             </div>
-          </div>
-          <p className={styles.tagline}>Minigames multiplayer em tempo real</p>
+          )}
         </header>
 
-        <main className={styles.main}>
-          {/* ── Nickname (always visible) ── */}
-          <div className={styles.nicknameBar}>
-            <Input
-              id="nickname"
-              label={isLoggedIn ? "Jogando como" : "Seu apelido"}
-              placeholder="Ex: Thunderbolt"
-              value={nickname}
-              onChange={(e) => { if (!isLoggedIn) setNickname(e.target.value); }}
-              maxLength={20}
-              autoComplete="off"
-              autoFocus={!isLoggedIn}
-              disabled={isLoggedIn}
-              title={isLoggedIn ? "Seu nome de usuário é usado automaticamente" : undefined}
-              style={isLoggedIn ? { opacity: 0.7, cursor: "not-allowed" } : undefined}
-            />
-          </div>
+        {/* ── Quick actions ── */}
+        <section className={styles.quickActions}>
+          <button
+            type="button"
+            className={`${styles.quickBtn} ${styles.quickCreate}`}
+            onClick={() => setTab("create")}
+          >
+            <span className={styles.quickIcon}>🚀</span>
+            <span className={styles.quickLabel}>Criar Sala</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.quickBtn} ${styles.quickJoin}`}
+            onClick={() => setTab("join")}
+          >
+            <span className={styles.quickIcon}>🚪</span>
+            <span className={styles.quickLabel}>Entrar</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.quickBtn} ${styles.quickBrowse}`}
+            onClick={() => setTab("browse")}
+          >
+            <span className={styles.quickIcon}>🔍</span>
+            <span className={styles.quickLabel}>Salas</span>
+          </button>
+          <button
+            type="button"
+            className={`${styles.quickBtn} ${styles.quickRandom}`}
+            onClick={handleJoinRandom}
+            disabled={isConnecting}
+          >
+            <span className={styles.quickIcon}>🎲</span>
+            <span className={styles.quickLabel}>Aleatória</span>
+          </button>
+        </section>
 
-          {/* ── Tabs ── */}
-          <div className={styles.tabs}>
-            <button className={[styles.tab, tab === "create" ? styles.activeTab : ""].filter(Boolean).join(" ")} onClick={() => setTab("create")} type="button">
-              Criar Sala
-            </button>
-            <button className={[styles.tab, tab === "join" ? styles.activeTab : ""].filter(Boolean).join(" ")} onClick={() => setTab("join")} type="button">
-              Entrar
-            </button>
-            <button className={[styles.tab, tab === "browse" ? styles.activeTab : ""].filter(Boolean).join(" ")} onClick={() => setTab("browse")} type="button">
-              Salas Abertas
-            </button>
-          </div>
+        {/* ── Error banner ── */}
+        {(fieldError ?? error) && (
+          <p className={styles.errorMsg} onClick={() => { setFieldError(null); clearError(); }}>
+            ⚠ {fieldError ?? error}
+          </p>
+        )}
+
+        {/* ── Main content area ── */}
+        <main className={styles.main}>
 
           {/* ── Create room ── */}
           {tab === "create" && (
-            <form className={styles.form} onSubmit={handleSubmit} noValidate>
-              <div className={styles.field}>
-                <span className={styles.label}>Máximo de jogadores</span>
+            <form className={styles.card} onSubmit={handleSubmit} noValidate>
+              <h2 className={styles.cardTitle}>Criar Sala</h2>
+
+              <div className={styles.optionRow}>
+                <span className={styles.optionLabel}>Jogadores</span>
                 <div className={styles.stepper}>
                   <button type="button" className={styles.step} onClick={() => setMaxPlayers((n) => Math.max(2, n - 1))} disabled={maxPlayers <= 2}>−</button>
                   <span className={styles.stepValue}>{maxPlayers}</span>
@@ -193,26 +217,17 @@ export default function HomePage() {
 
               <GameSelection />
 
-              {/* ── Privacy toggle ── */}
               <button
                 type="button"
-                className={[styles.toggle, isPrivate ? styles.toggleActive : ""].filter(Boolean).join(" ")}
+                className={`${styles.toggleRow} ${isPrivate ? styles.toggleRowActive : ""}`}
                 onClick={() => setIsPrivate((v) => !v)}
               >
                 <span className={styles.toggleIcon}>{isPrivate ? "🔒" : "🌐"}</span>
-                <span className={styles.toggleText}>
-                  {isPrivate ? "Sala Privada" : "Sala Pública"}
-                </span>
-                <span className={styles.toggleHint}>
-                  {isPrivate ? "Só entra com o link" : "Visível para todos"}
-                </span>
+                <div className={styles.toggleInfo}>
+                  <span className={styles.toggleText}>{isPrivate ? "Sala Privada" : "Sala Pública"}</span>
+                  <span className={styles.toggleHint}>{isPrivate ? "Só entra com o link" : "Visível para todos"}</span>
+                </div>
               </button>
-
-              {(fieldError ?? error) && (
-                <p className={styles.errorMsg} onClick={() => { setFieldError(null); clearError(); }}>
-                  ⚠ {fieldError ?? error}
-                </p>
-              )}
 
               <Button type="submit" variant="primary" size="lg" fullWidth disabled={isConnecting}>
                 {isConnecting
@@ -222,9 +237,11 @@ export default function HomePage() {
             </form>
           )}
 
-          {/* ── Join by code / random ── */}
+          {/* ── Join by code ── */}
           {tab === "join" && (
-            <div className={styles.form}>
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Entrar na Sala</h2>
+
               <Input
                 id="roomCode"
                 label="Código da sala"
@@ -233,13 +250,8 @@ export default function HomePage() {
                 onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                 maxLength={8}
                 autoComplete="off"
+                autoFocus
               />
-
-              {(fieldError ?? error) && (
-                <p className={styles.errorMsg} onClick={() => { setFieldError(null); clearError(); }}>
-                  ⚠ {fieldError ?? error}
-                </p>
-              )}
 
               <Button
                 type="button"
@@ -247,62 +259,34 @@ export default function HomePage() {
                 size="lg"
                 fullWidth
                 disabled={isConnecting}
-                onClick={(e) => {
-                  // wrap in a form submit equivalent
+                onClick={() => {
                   const fakeEvent = { preventDefault: () => { } } as React.FormEvent;
                   handleSubmit(fakeEvent);
                 }}
               >
                 {isConnecting
                   ? <><span className="spinner" style={{ marginRight: "0.5rem" }} /> Conectando…</>
-                  : "🚪 Entrar na Sala"}
-              </Button>
-
-              <div className={styles.divider}>
-                <span>ou</span>
-              </div>
-
-              <Button
-                type="button"
-                variant="secondary"
-                size="lg"
-                fullWidth
-                disabled={isConnecting}
-                onClick={handleJoinRandom}
-              >
-                🎲 Sala Aleatória
+                  : "🚪 Entrar"}
               </Button>
             </div>
           )}
 
           {/* ── Browse public rooms ── */}
           {tab === "browse" && (
-            <div className={styles.form}>
-              {(fieldError ?? error) && (
-                <p className={styles.errorMsg} onClick={() => { setFieldError(null); clearError(); }}>
-                  ⚠ {fieldError ?? error}
-                </p>
-              )}
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>Salas Abertas</h2>
 
               {publicRooms.length === 0 ? (
-                <p className={styles.emptyRooms}>Nenhuma sala pública aberta no momento.</p>
+                <p className={styles.emptyRooms}>Nenhuma sala pública aberta.</p>
               ) : (
                 <ul className={styles.roomList}>
                   {publicRooms.map((r) => (
-                    <li key={r.id} className={styles.roomCard}>
+                    <li key={r.id} className={styles.roomItem}>
                       <div className={styles.roomInfo}>
                         <span className={styles.roomHost}>{r.hostNickname}</span>
-                        <span className={styles.roomPlayers}>
-                          👥 {r.playerCount}/{r.maxPlayers}
-                        </span>
+                        <span className={styles.roomMeta}>👥 {r.playerCount}/{r.maxPlayers}</span>
                       </div>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        disabled={isConnecting}
-                        onClick={() => handleJoinBrowsed(r.id)}
-                      >
+                      <Button type="button" variant="primary" size="sm" disabled={isConnecting} onClick={() => handleJoinBrowsed(r.id)}>
                         Entrar
                       </Button>
                     </li>
@@ -312,10 +296,6 @@ export default function HomePage() {
             </div>
           )}
         </main>
-
-        <footer className={styles.footer}>
-          <p>Rápido · Competitivo · Para o campus</p>
-        </footer>
       </div>
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
