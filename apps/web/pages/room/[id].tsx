@@ -8,6 +8,7 @@ import ScoreBar from "@/components/games/ScoreBar";
 import { getGameComponent } from "@/components/games/registry";
 // Register all game components (side-effect imports)
 import "@/components/games/reaction/ReactionGame";
+import "@/components/games/color-match/ColorMatchGame";
 import ResultsScreen from "@/components/ResultsScreen";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -18,6 +19,7 @@ import styles from "@/styles/Room.module.css";
 export default function RoomPage() {
     const router = useRouter();
     const { id: roomId } = router.query as { id: string };
+
 
     const {
         room,
@@ -33,6 +35,7 @@ export default function RoomPage() {
         lastCoinUpdate,
         gameOrder,
         sendAction,
+        tryReconnect,
     } = useGameStore();
 
     // const { hydrate } = useAuthStore();
@@ -48,12 +51,30 @@ export default function RoomPage() {
     const isConnected = status === "connected";
     const hasJoined = !!room && !!playerId;
 
-    // Kick to home if connection is lost
+    // Auto-reconnect on page load (e.g. after refresh / connection loss)
+    useEffect(() => {
+        if (!hasJoined && status === "idle") {
+            tryReconnect();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Kick to home if connection is lost — but try reconnecting first
     useEffect(() => {
         if (status === "disconnected" && hasJoined) {
-            void router.push("/");
+            // Clear stale state, attempt reconnect
+            useGameStore.setState({
+                room: null, playerId: null, gameState: null,
+                gameResults: null, gameOrder: [], lastCoinUpdate: null, status: "idle",
+            });
+            tryReconnect();
+            // If no room restored within 3 s, redirect home
+            const timer = setTimeout(() => {
+                if (!useGameStore.getState().room) void router.push("/");
+            }, 3000);
+            return () => clearTimeout(timer);
         }
-    }, [status, hasJoined, router]);
+    }, [status, hasJoined, router, tryReconnect]);
 
     // Show server errors
     useEffect(() => {

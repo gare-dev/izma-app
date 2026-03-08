@@ -115,26 +115,35 @@ export default function HomePage() {
         <header className={styles.hero}>
           <div className={styles.heroTop}>
             <div className={styles.logo}>⚡ IZMA</div>
-            <button
-              className={styles.profileBtn}
-              onClick={() => setAuthOpen(true)}
-              type="button"
-            >
-              {isLoggedIn ? (
-                <>
-                  {user.avatarUrl ? (
-                    <img src={user.avatarUrl} alt="" className={styles.profileAvatar} />
-                  ) : (
-                    <span className={styles.profileAvatar}>
-                      {user.username[0]?.toUpperCase() ?? "?"}
-                    </span>
-                  )}
-                  <span className={styles.profileCoins}>🪙 {user.coins}</span>
-                </>
-              ) : (
-                "Entrar"
-              )}
-            </button>
+            <div className={styles.heroActions}>
+              <button
+                type="button"
+                className={styles.rankingsBtn}
+                onClick={() => router.push("/rankings")}
+              >
+                🏆 Rankings
+              </button>
+              <button
+                className={styles.profileBtn}
+                onClick={() => setAuthOpen(true)}
+                type="button"
+              >
+                {isLoggedIn ? (
+                  <>
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt="" className={styles.profileAvatar} />
+                    ) : (
+                      <span className={styles.profileAvatar}>
+                        {user.username[0]?.toUpperCase() ?? "?"}
+                      </span>
+                    )}
+                    <span className={styles.profileCoins}>🪙 {user.coins}</span>
+                  </>
+                ) : (
+                  "Entrar"
+                )}
+              </button>
+            </div>
           </div>
           <p className={styles.tagline}>Minigames multiplayer em tempo real</p>
         </header>
@@ -240,7 +249,7 @@ export default function HomePage() {
                 disabled={isConnecting}
                 onClick={(e) => {
                   // wrap in a form submit equivalent
-                  const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+                  const fakeEvent = { preventDefault: () => { } } as React.FormEvent;
                   handleSubmit(fakeEvent);
                 }}
               >

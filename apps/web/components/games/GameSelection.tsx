@@ -6,6 +6,7 @@ import styles from "./GameSelection.module.css";
 /** Icons for known games — extend as new games are added */
 const GAME_ICONS: Record<string, string> = {
     reaction: "⚡",
+    "color-match": "🎨",
 };
 
 // ─── Single game card ──────────────────────────────────────────────────────
@@ -44,10 +45,12 @@ export default function GameSelection() {
         availableGames,
         selectedGameIds,
         totalRounds,
+        roundsPerGame,
         selectionMode,
         fetchGames,
         setSelectionMode,
         setTotalRounds,
+        setGameRounds,
         toggleGameSelection,
     } = useGameStore();
 
@@ -61,6 +64,18 @@ export default function GameSelection() {
         { value: "MANUAL", label: "Escolher jogos" },
         { value: "RANDOM", label: "Aleatório" },
     ];
+
+    const gameList = availableGames.length > 0
+        ? availableGames.filter((g) => g.isActive)
+        : [{
+            id: "reaction",
+            name: "Reação Rápida",
+            description: "Clique o mais rápido quando o sinal aparecer!",
+            thumbnailUrl: "",
+            minPlayers: 2,
+            maxPlayers: 8,
+            isActive: true,
+        }];
 
     return (
         <div className={styles.panel}>
@@ -84,86 +99,64 @@ export default function GameSelection() {
                 <>
                     <span className={styles.panelTitle}>Minigames</span>
                     <div className={styles.gameList}>
-                        {availableGames.length === 0 ? (
-                            <GameCard
-                                game={{
-                                    id: "reaction",
-                                    name: "Reação Rápida",
-                                    description: "Clique o mais rápido quando o sinal aparecer!",
-                                    thumbnailUrl: "",
-                                    minPlayers: 2,
-                                    maxPlayers: 8,
-                                    isActive: true,
-                                }}
-                                selected={selectedGameIds.includes("reaction")}
-                                onToggle={() => toggleGameSelection("reaction")}
-                            />
-                        ) : (
-                            availableGames
-                                .filter((g) => g.isActive)
-                                .map((g) => (
-                                    <GameCard
-                                        key={g.id}
-                                        game={g}
-                                        selected={selectedGameIds.includes(g.id)}
-                                        onToggle={() => toggleGameSelection(g.id)}
+                        {gameList.map((g) => (
+                            <div key={g.id}>
+                                <GameCard
+                                    game={g}
+                                    selected={selectedGameIds.includes(g.id)}
+                                    onToggle={() => toggleGameSelection(g.id)}
+                                />
+                                {/* Per-game round stepper (only when selected) */}
+                                {selectedGameIds.includes(g.id) && (
+                                    <RoundsStepper
+                                        label={`Rodadas — ${g.name}:`}
+                                        value={roundsPerGame[g.id] ?? 3}
+                                        onChange={(n) => setGameRounds(g.id, n)}
                                     />
-                                ))
-                        )}
+                                )}
+                            </div>
+                        ))}
                     </div>
                 </>
             )}
 
-            {/* ── Rounds stepper ── */}
-            <div className={styles.roundsRow}>
-                <span className={styles.roundsLabel}>Rodadas:</span>
-                <div className="stepper" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <button
-                        type="button"
-                        style={{
-                            background: "var(--bg-card)",
-                            border: "1px solid var(--border)",
-                            borderRadius: "6px",
-                            width: "2rem",
-                            height: "2rem",
-                            fontSize: "1.1rem",
-                            fontWeight: 700,
-                            color: "var(--text)",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                        }}
-                        onClick={() => setTotalRounds(totalRounds - 1)}
-                        disabled={totalRounds <= 1}
-                    >
-                        −
-                    </button>
-                    <span style={{ fontSize: "1.3rem", fontWeight: 900, minWidth: "2rem", textAlign: "center" }}>
-                        {totalRounds}
-                    </span>
-                    <button
-                        type="button"
-                        style={{
-                            background: "var(--bg-card)",
-                            border: "1px solid var(--border)",
-                            borderRadius: "6px",
-                            width: "2rem",
-                            height: "2rem",
-                            fontSize: "1.1rem",
-                            fontWeight: 700,
-                            color: "var(--text)",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                        }}
-                        onClick={() => setTotalRounds(totalRounds + 1)}
-                        disabled={totalRounds >= 20}
-                    >
-                        +
-                    </button>
-                </div>
+            {/* ── Global rounds stepper (only in RANDOM mode) ── */}
+            {selectionMode === "RANDOM" && (
+                <RoundsStepper
+                    label="Rodadas:"
+                    value={totalRounds}
+                    onChange={setTotalRounds}
+                />
+            )}
+        </div>
+    );
+}
+
+// ─── Reusable Rounds Stepper ───────────────────────────────────────────────
+
+function RoundsStepper({ label, value, onChange }: { label: string; value: number; onChange: (n: number) => void }) {
+    const btnStyle: React.CSSProperties = {
+        background: "var(--bg-card)",
+        border: "1px solid var(--border)",
+        borderRadius: "6px",
+        width: "2rem",
+        height: "2rem",
+        fontSize: "1.1rem",
+        fontWeight: 700,
+        color: "var(--text)",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+    };
+
+    return (
+        <div className={styles.roundsRow}>
+            <span className={styles.roundsLabel}>{label}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <button type="button" style={btnStyle} onClick={() => onChange(value - 1)} disabled={value <= 1}>−</button>
+                <span style={{ fontSize: "1.3rem", fontWeight: 900, minWidth: "2rem", textAlign: "center" }}>{value}</span>
+                <button type="button" style={btnStyle} onClick={() => onChange(value + 1)} disabled={value >= 20}>+</button>
             </div>
         </div>
     );

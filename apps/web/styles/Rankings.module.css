@@ -1,0 +1,261 @@
+/* ─── Rankings page ─────────────────────────────────────────────────────── */
+
+.page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100dvh;
+    padding: 2rem 1.25rem 4rem;
+    gap: 1.5rem;
+}
+
+/* ── Header ── */
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 520px;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, #a855f7 0%, #f43f5e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    cursor: pointer;
+}
+
+.backBtn {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms;
+}
+
+.backBtn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--primary);
+    color: var(--text);
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-align: center;
+    color: var(--text);
+}
+
+/* ── Category tabs (coins / victories) ── */
+
+.categoryTabs {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 520px;
+}
+
+.catTab {
+    flex: 1;
+    padding: 0.65rem 0;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 150ms;
+    text-align: center;
+}
+
+.catTab:hover {
+    background: var(--bg-card-hover);
+}
+
+.catTabActive {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.catTabActive:hover {
+    background: var(--primary-hover);
+}
+
+/* ── Period filter (for victories only) ── */
+
+.periodBar {
+    display: flex;
+    gap: 0.35rem;
+    width: 100%;
+    max-width: 520px;
+    justify-content: center;
+}
+
+.periodBtn {
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 150ms;
+}
+
+.periodBtn:hover {
+    background: var(--bg-card-hover);
+}
+
+.periodActive {
+    background: var(--bg-elevated);
+    border-color: var(--primary);
+    color: var(--primary-hover);
+}
+
+/* ── Leaderboard list ── */
+
+.board {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.empty {
+    text-align: center;
+    color: var(--text-subtle);
+    padding: 3rem 0;
+    font-size: 0.95rem;
+}
+
+/* ── Podium (top 3) ── */
+
+.podiumRow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    border-radius: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    transition: background 120ms;
+}
+
+.podiumRow:hover {
+    background: var(--bg-card-hover);
+}
+
+.gold {
+    border-color: #fbbf24;
+    background: rgba(251, 191, 36, 0.07);
+}
+
+.silver {
+    border-color: #94a3b8;
+    background: rgba(148, 163, 184, 0.06);
+}
+
+.bronze {
+    border-color: #cd7f32;
+    background: rgba(205, 127, 50, 0.06);
+}
+
+.medal {
+    font-size: 1.5rem;
+    width: 2rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* ── Regular row (4+) ── */
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid transparent;
+    transition: background 120ms;
+}
+
+.row:hover {
+    background: var(--bg-card-hover);
+}
+
+.rankNum {
+    width: 2rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+/* ── Avatar ── */
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.avatarFallback {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+/* ── Name + value ── */
+
+.info {
+    flex: 1;
+    min-width: 0;
+}
+
+.username {
+    font-weight: 700;
+    font-size: 0.95rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.value {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--primary-hover);
+    flex-shrink: 0;
+}
+
+/* ── Loading ── */
+
+.loading {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 0;
+}

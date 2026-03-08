@@ -11,7 +11,9 @@ export type ClientMessage =
     | { type: "START_GAME" }
     | { type: "PLAYER_ACTION"; payload: { action: string; data?: unknown } }
     /** Sent right after WS connect if the user has a JWT */
-    | { type: "AUTH"; payload: { token: string } };
+    | { type: "AUTH"; payload: { token: string } }
+    /** Attempt to rejoin a room after disconnect / page reload */
+    | { type: "RECONNECT" };
 
 // ─── Server → Client ───────────────────────────────────────────────────────
 
@@ -42,7 +44,9 @@ export type ServerMessage =
     /** Notifies coin reward at end of match */
     | { type: "COINS_UPDATE"; payload: { userId: string; coins: number; delta: number; reason: string } }
     /** List of public rooms in lobby state */
-    | { type: "ROOM_LIST"; payload: { rooms: PublicRoomInfo[] } };
+    | { type: "ROOM_LIST"; payload: { rooms: PublicRoomInfo[] } }
+    /** Chat message from another player */
+    | { type: "CHAT_MESSAGE"; payload: { playerId: string; message: string } };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

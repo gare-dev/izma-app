@@ -12,6 +12,8 @@ import type {
     Game,
     PublicRoomInfo,
     ApiError,
+    RankingsResponse,
+    RankingPeriod,
 } from "@izma/types";
 
 function getBaseUrl(): string {
@@ -120,4 +122,14 @@ export async function apiGetGames(): Promise<Game[]> {
 
 export async function apiGetPublicRooms(): Promise<PublicRoomInfo[]> {
     return request<PublicRoomInfo[]>("/rooms");
+}
+
+// ─── Rankings ───────────────────────────────────────────────────────────────
+
+export async function apiGetTopCoins(): Promise<RankingsResponse> {
+    return request<RankingsResponse>("/rankings/coins");
+}
+
+export async function apiGetTopVictories(period: RankingPeriod = "all"): Promise<RankingsResponse> {
+    return request<RankingsResponse>(`/rankings/victories?period=${period}`);
 }

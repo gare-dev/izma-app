@@ -26,6 +26,7 @@ interface GameStore {
     availableGames: Game[];
     selectedGameIds: string[];
     totalRounds: number;
+    roundsPerGame: Record<string, number>;
     selectionMode: GameSelectionMode;
     gameOrder: string[];           // from ROOM_GAMES_DEFINED
 
@@ -45,6 +46,7 @@ interface GameStore {
     fetchGames: () => Promise<void>;
     setSelectionMode: (mode: GameSelectionMode) => void;
     setTotalRounds: (n: number) => void;
+    setGameRounds: (gameId: string, n: number) => void;
     toggleGameSelection: (gameId: string) => void;
 
     // ── High-level helpers ────────────────────────────────────────────────────
@@ -58,6 +60,7 @@ interface GameStore {
     react: () => void;
     clearError: () => void;
     resetGame: () => void;
+    tryReconnect: () => void;
 }
 
 // ─── WS URL ────────────────────────────────────────────────────────────────
@@ -91,6 +94,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     availableGames: [],
     selectedGameIds: ["reaction"],
     totalRounds: 3,
+    roundsPerGame: {},
     selectionMode: "MANUAL",
     gameOrder: [],
     lastCoinUpdate: null,
@@ -111,6 +115,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     setSelectionMode: (mode) => set({ selectionMode: mode }),
     setTotalRounds: (n) => set({ totalRounds: Math.max(1, Math.min(20, n)) }),
+    setGameRounds: (gameId, n) => {
+        const clamped = Math.max(1, Math.min(20, n));
+        set({ roundsPerGame: { ...get().roundsPerGame, [gameId]: clamped } });
+    },
     toggleGameSelection: (gameId) => {
         const current = get().selectedGameIds;
         if (current.includes(gameId)) {
@@ -127,7 +135,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     connect: (onOpen) => {
         const existing = get().ws;
-        if (existing && existing.readyState < WebSocket.CLOSING) return;
+        // If already open, fire callback immediately
+        if (existing && existing.readyState === WebSocket.OPEN) {
+            onOpen?.();
+            return;
+        }
+        if (existing && existing.readyState === WebSocket.CONNECTING) {
+            if (onOpen) {
+                existing.onopen = () => {
+                    set({ status: "connected" });
+                    onOpen();
+                };
+            }
+            return;
+        }
 
         const url = getWsUrl();
         if (!url) return;
@@ -138,8 +159,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ws.onopen = () => {
             set({ status: "connected" });
 
-            // Auth is handled via cookies on the WS upgrade request
-            onOpen?.();
+            if (onOpen) {
+                onOpen();
+            } else {
+                // No explicit action — attempt auto-reconnect
+                ws.send(JSON.stringify({ type: "RECONNECT" }));
+            }
         };
 
         ws.onmessage = (event) => {
@@ -173,7 +198,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     createRoom: (nickname, maxPlayers, gameSettings, isPrivate) => {
-        const { connect, send, setNickname, totalRounds, selectionMode, selectedGameIds } = get();
+        const { connect, send, setNickname, totalRounds, selectionMode, selectedGameIds, roundsPerGame } = get();
         setNickname(nickname);
         set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null });
 
@@ -181,6 +206,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             totalRounds,
             mode: selectionMode,
             selectedGameIds: selectionMode === "MANUAL" ? selectedGameIds : [],
+            roundsPerGame: selectionMode === "MANUAL" ? roundsPerGame : undefined,
         };
 
         connect(() => {
@@ -218,6 +244,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
     },
 
+    sendChatMessage: async (message: string) => {
+        get().sendAction("CHAT_MESSAGE", { message });
+    },
+
     setReady: () => get().send({ type: "SET_READY" }),
     startGame: () => get().send({ type: "START_GAME" }),
     sendAction: (action, data) => get().send({ type: "PLAYER_ACTION", payload: { action, data } }),
@@ -232,6 +262,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (room) {
             set({ room: { ...room, state: "lobby" } });
         }
+    },
+
+    tryReconnect: () => {
+        const { ws, status } = get();
+        if (ws || status !== "idle") return;
+        get().connect(); // no onOpen → will send RECONNECT on open
     },
 }));
 

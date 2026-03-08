@@ -1,0 +1,198 @@
+.center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 1rem;
+    width: 100%;
+    padding: 2rem 1rem;
+}
+
+.bigNumber {
+    font-size: clamp(5rem, 20vw, 10rem);
+    font-weight: 900;
+    line-height: 1;
+    color: var(--primary-hover);
+    text-shadow: 0 0 40px var(--primary-glow);
+    animation: pulse 800ms ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.08);
+        opacity: 0.85;
+    }
+}
+
+.hint {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.roundBadge {
+    background: color-mix(in srgb, var(--primary) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+    color: var(--primary-hover);
+    border-radius: 20px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+/* ── Color display area ── */
+.colorArena {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    width: 100%;
+    padding: 2rem 1rem;
+}
+
+.colorWord {
+    font-size: clamp(3rem, 12vw, 5.5rem);
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+    animation: popIn 300ms ease-out;
+    user-select: none;
+}
+
+@keyframes popIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.instruction {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+/* ── Option buttons grid ── */
+.optionsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 400px;
+}
+
+.optionBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 0.5rem;
+    border-radius: 14px;
+    border: 2px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 80ms ease, border-color 150ms ease, background 150ms ease;
+    user-select: none;
+}
+
+.optionBtn:hover {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.optionBtn:active {
+    transform: scale(0.96);
+}
+
+.optionBtn.picked {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* ── Result card ── */
+.resultCard {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+    width: 100%;
+    max-width: 360px;
+}
+
+.resultCard[data-outcome="win"] {
+    border-color: var(--success);
+    background: color-mix(in srgb, var(--success) 12%, transparent);
+    color: var(--success);
+}
+
+.resultCard[data-outcome="lose"] {
+    color: var(--text);
+}
+
+.resultCard[data-outcome="wrong"] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+}
+
+.resultCard[data-outcome="timeout"] {
+    color: var(--text-muted);
+}
+
+.resultIcon {
+    font-size: 1.5rem;
+}
+
+/* ── Mini scoreboard ── */
+.miniScore {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    width: 100%;
+    max-width: 360px;
+    margin-top: 0.5rem;
+}
+
+.scoreRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.88rem;
+}
+
+.scoreRow.scoreSelf {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.bigText {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}

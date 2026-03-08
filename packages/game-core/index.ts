@@ -13,3 +13,4 @@ export {
 // Import them here so they register when the package is loaded.
 
 import "./engines/reaction";
+import "./engines/color-match";
