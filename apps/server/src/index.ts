@@ -25,6 +25,7 @@ import {
     handleStartGame,
     handlePlayerAction,
     handleDisconnect,
+    handleReconnect,
 } from "./handlers.ts";
 import type { WsData } from "./types.ts";
 
@@ -55,6 +56,9 @@ app.get("/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/games", gamesRouter);
+
+import { rankingsRouter } from "./modules/rankings/rankings.routes.ts";
+app.use("/api/rankings", rankingsRouter);
 
 // ─── Public rooms list (REST) ───────────────────────────────────────────────
 
@@ -143,6 +147,7 @@ wss.on("connection", (ws: WebSocket) => {
     console.log(`[ws] connected  ${data.id}`);
 
     ws.on("message", (raw: Buffer | string) => {
+
         const msg = parseClientMessage(raw.toString());
         if (!msg) {
             ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Invalid message." } }));
@@ -173,6 +178,9 @@ wss.on("connection", (ws: WebSocket) => {
                 break;
             case "PLAYER_ACTION":
                 handlePlayerAction(ws, msg.payload);
+                break;
+            case "RECONNECT":
+                void handleReconnect(ws);
                 break;
         }
     });

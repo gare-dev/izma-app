@@ -33,6 +33,7 @@ export default function RoomPage() {
         lastCoinUpdate,
         gameOrder,
         sendAction,
+        tryReconnect,
     } = useGameStore();
 
     // const { hydrate } = useAuthStore();
@@ -48,12 +49,30 @@ export default function RoomPage() {
     const isConnected = status === "connected";
     const hasJoined = !!room && !!playerId;
 
-    // Kick to home if connection is lost
+    // Auto-reconnect on page load (e.g. after refresh / connection loss)
+    useEffect(() => {
+        if (!hasJoined && status === "idle") {
+            tryReconnect();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Kick to home if connection is lost — but try reconnecting first
     useEffect(() => {
         if (status === "disconnected" && hasJoined) {
-            void router.push("/");
+            // Clear stale state, attempt reconnect
+            useGameStore.setState({
+                room: null, playerId: null, gameState: null,
+                gameResults: null, gameOrder: [], lastCoinUpdate: null, status: "idle",
+            });
+            tryReconnect();
+            // If no room restored within 3 s, redirect home
+            const timer = setTimeout(() => {
+                if (!useGameStore.getState().room) void router.push("/");
+            }, 3000);
+            return () => clearTimeout(timer);
         }
-    }, [status, hasJoined, router]);
+    }, [status, hasJoined, router, tryReconnect]);
 
     // Show server errors
     useEffect(() => {

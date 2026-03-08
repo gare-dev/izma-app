@@ -168,6 +168,24 @@ export interface CoinTransaction {
     timestamp: string;
 }
 
+// ─── Rankings DTOs ─────────────────────────────────────────────────────────
+
+export type RankingPeriod = "daily" | "weekly" | "monthly" | "all";
+
+export interface RankedUser {
+    rank: number;
+    userId: string;
+    username: string;
+    avatarUrl: string | null;
+    value: number; // coins or win count
+}
+
+export interface RankingsResponse {
+    period: RankingPeriod;
+    type: "coins" | "victories";
+    entries: RankedUser[];
+}
+
 // ─── API Error ─────────────────────────────────────────────────────────────
 
 export interface ApiError {

@@ -10,6 +10,12 @@ import {
     sendTo,
     roomSnapshot,
     removePlayer,
+    getUserRoomId,
+    getPersistedRoom,
+    cancelRoomExpiry,
+    clearUserRoomMapping,
+    getDisconnectedPlayer,
+    clearDisconnectedPlayer,
 } from "./rooms.ts";
 import type { LiveRoom, LivePlayer, WsData } from "./types.ts";
 import { getWsData, setWsData } from "./ws-data.ts";
@@ -44,6 +50,7 @@ export async function handleCreateRoom(
     ws: WebSocket,
     payload: Extract<ClientMessage, { type: "CREATE_ROOM" }>["payload"],
 ) {
+
     const data = getWsData(ws);
     const playerId = data.id;
     const roomId = uuid().slice(0, 8).toUpperCase();
@@ -60,16 +67,21 @@ export async function handleCreateRoom(
         ws.send(JSON.stringify({ type: "ERROR", payload: { message: "totalRounds deve ser entre 1 e 20." } }));
         return;
     }
+
+
     if (games.mode === "MANUAL") {
         if (!games.selectedGameIds || games.selectedGameIds.length === 0) {
             ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Selecione pelo menos 1 jogo." } }));
             return;
         }
+        console.log("asdasd")
+
         for (const gid of games.selectedGameIds) {
             if (!await getGameById(gid)) {
                 ws.send(JSON.stringify({ type: "ERROR", payload: { message: `Jogo "${gid}" não encontrado.` } }));
                 return;
             }
+
         }
     }
     if (games.mode === "RANDOM") {
@@ -305,7 +317,7 @@ export function handleJoinRandom(
     }
 
     const room = candidates[Math.floor(Math.random() * candidates.length)];
-    handleJoinRoom(ws, { roomId: room.id, nickname: payload.nickname });
+    handleJoinRoom(ws, { roomId: room?.id!, nickname: payload.nickname });
 }
 
 // ─── DISCONNECT ─────────────────────────────────────────────────────────────
@@ -318,11 +330,87 @@ export function handleDisconnect(ws: WebSocket) {
     const player = room.players.find((p) => p.id === data.id);
     const nickname = player?.nickname ?? "unknown";
 
-    removePlayer(room, data.id);
+    const isEmpty = removePlayer(room, data.id);
 
-    if (room.players.length > 0) {
+    if (!isEmpty) {
         broadcast(room, { type: "ROOM_UPDATE", payload: { room: roomSnapshot(room) } });
     }
 
     console.log(`[room] ${nickname} disconnected from ${room.id}`);
+}
+
+// ─── RECONNECT ──────────────────────────────────────────────────────────────
+
+export async function handleReconnect(ws: WebSocket) {
+    const data = getWsData(ws);
+    if (!data.userId) return; // guests can't reconnect
+
+    const roomId = await getUserRoomId(data.userId);
+    if (!roomId) return; // no room to reconnect to
+
+    // Check if room is still in memory (other players present)
+    let room = getRoom(roomId);
+
+    if (!room) {
+        // Room only exists in Redis (all players had disconnected)
+        const persisted = await getPersistedRoom(roomId);
+        if (!persisted) return; // expired
+
+        room = {
+            id: persisted.id,
+            hostId: persisted.hostId,
+            maxPlayers: persisted.maxPlayers,
+            isPrivate: persisted.isPrivate,
+            gameId: persisted.gameId,
+            games: persisted.games,
+            currentGameIndex: persisted.currentGameIndex,
+            gameState: null,
+            players: [],
+            engine: null,
+            state: persisted.state === "playing" || persisted.state === "finished"
+                ? "lobby"
+                : persisted.state,
+        } satisfies import("./types.ts").LiveRoom;
+
+        setRoom(room);
+        cancelRoomExpiry(roomId);
+    }
+
+    // Don't exceed max players
+    if (room.players.length >= room.maxPlayers) return;
+
+    // Restore previous player data if available
+    const oldData = await getDisconnectedPlayer(roomId, data.userId);
+
+    const playerId = data.id;
+    const player: import("./types.ts").LivePlayer = {
+        id: playerId,
+        nickname: oldData?.nickname ?? data.username ?? "Player",
+        score: oldData?.score ?? 0,
+        status: "waiting",
+        isHost: room.players.length === 0, // host if first back
+        userId: data.userId,
+        avatarUrl: oldData?.avatarUrl ?? null,
+        ws,
+    };
+
+    // Remove stale entry for the same user (safety)
+    room.players = room.players.filter((p) => p.userId !== data.userId);
+    room.players.push(player);
+
+    if (player.isHost) {
+        room.hostId = playerId;
+    }
+
+    data.roomId = room.id;
+    setWsData(ws, data);
+
+    // Clean up reconnection keys
+    clearUserRoomMapping(data.userId);
+    clearDisconnectedPlayer(roomId, data.userId);
+
+    sendTo(player, { type: "JOINED", payload: { playerId, roomId: room.id } });
+    broadcast(room, { type: "ROOM_UPDATE", payload: { room: roomSnapshot(room) } });
+
+    console.log(`[room] ${player.nickname} reconnected to ${room.id}`);
 }

@@ -11,7 +11,9 @@ export type ClientMessage =
     | { type: "START_GAME" }
     | { type: "PLAYER_ACTION"; payload: { action: string; data?: unknown } }
     /** Sent right after WS connect if the user has a JWT */
-    | { type: "AUTH"; payload: { token: string } };
+    | { type: "AUTH"; payload: { token: string } }
+    /** Attempt to rejoin a room after disconnect / page reload */
+    | { type: "RECONNECT" };
 
 // ─── Server → Client ───────────────────────────────────────────────────────
 

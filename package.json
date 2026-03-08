@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "dev:web": "cd apps/web && npm run dev",
-    "dev:server": "bun run --cwd apps/server dev",
+    "dev:server": "bun --env-file apps/server/.env --watch apps/server/src/index.ts",
     "build:web": "bun run --cwd apps/web build",
     "lint": "bunx biome check .",
     "format": "bunx biome format . --write"

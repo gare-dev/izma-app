@@ -58,6 +58,7 @@ interface GameStore {
     react: () => void;
     clearError: () => void;
     resetGame: () => void;
+    tryReconnect: () => void;
 }
 
 // ─── WS URL ────────────────────────────────────────────────────────────────
@@ -127,6 +128,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     connect: (onOpen) => {
         const existing = get().ws;
+        // If already open, fire callback immediately
+        if (existing && existing.readyState === WebSocket.OPEN) {
+            onOpen?.();
+            return;
+        }
         if (existing && existing.readyState < WebSocket.CLOSING) return;
 
         const url = getWsUrl();
@@ -138,8 +144,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ws.onopen = () => {
             set({ status: "connected" });
 
-            // Auth is handled via cookies on the WS upgrade request
-            onOpen?.();
+            if (onOpen) {
+                onOpen();
+            } else {
+                // No explicit action — attempt auto-reconnect
+                ws.send(JSON.stringify({ type: "RECONNECT" }));
+            }
         };
 
         ws.onmessage = (event) => {
@@ -232,6 +242,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         if (room) {
             set({ room: { ...room, state: "lobby" } });
         }
+    },
+
+    tryReconnect: () => {
+        const { ws, status } = get();
+        if (ws || status !== "idle") return;
+        get().connect(); // no onOpen → will send RECONNECT on open
     },
 }));
 
