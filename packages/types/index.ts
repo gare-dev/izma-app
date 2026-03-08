@@ -66,6 +66,8 @@ export interface RoomGameSettings {
     mode: GameSelectionMode;
     /** When mode = MANUAL, the host picks gameIds; when RANDOM, backend fills this. */
     selectedGameIds: string[];
+    /** Per-game round overrides (MANUAL mode). Maps gameId → rounds for that game. */
+    roundsPerGame?: Record<string, number>;
 }
 
 // ─── Room ──────────────────────────────────────────────────────────────────
@@ -112,12 +114,14 @@ export interface BaseGameState {
 // Each minigame has its own file under games/. Re-exported here for convenience.
 
 export { type ReactionPhase, type ReactionGameState } from "./games/reaction";
+export { type ColorMatchPhase, type ColorMatchGameState } from "./games/color-match";
 
 // ─── Game State Union ──────────────────────────────────────────────────────
 // Add new game state interfaces to this union as you create them.
 
 import type { ReactionGameState } from "./games/reaction";
-export type AnyGameState = ReactionGameState;
+import type { ColorMatchGameState } from "./games/color-match";
+export type AnyGameState = ReactionGameState | ColorMatchGameState;
 
 // ─── Auth DTOs ─────────────────────────────────────────────────────────────
 
@@ -155,6 +159,7 @@ export interface CreateRoomDTO {
         totalRounds: number;
         mode: GameSelectionMode;
         selectedGameIds: string[];
+        roundsPerGame?: Record<string, number>;
     };
 }
 

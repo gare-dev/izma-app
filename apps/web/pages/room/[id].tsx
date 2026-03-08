@@ -8,6 +8,7 @@ import ScoreBar from "@/components/games/ScoreBar";
 import { getGameComponent } from "@/components/games/registry";
 // Register all game components (side-effect imports)
 import "@/components/games/reaction/ReactionGame";
+import "@/components/games/color-match/ColorMatchGame";
 import ResultsScreen from "@/components/ResultsScreen";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -18,6 +19,7 @@ import styles from "@/styles/Room.module.css";
 export default function RoomPage() {
     const router = useRouter();
     const { id: roomId } = router.query as { id: string };
+
 
     const {
         room,

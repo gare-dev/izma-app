@@ -51,76 +51,87 @@ export async function handleCreateRoom(
     payload: Extract<ClientMessage, { type: "CREATE_ROOM" }>["payload"],
 ) {
 
-    const data = getWsData(ws);
-    const playerId = data.id;
-    const roomId = uuid().slice(0, 8).toUpperCase();
+    try {
+        const data = getWsData(ws);
+        const playerId = data.id;
+        const roomId = uuid().slice(0, 8).toUpperCase();
 
-    // Parse game settings from payload (backward-compatible)
-    const games: RoomGameSettings = (payload as any).games ?? {
-        totalRounds: 5,
-        mode: "MANUAL" as const,
-        selectedGameIds: [payload.gameId || "reaction"],
-    };
+        // Parse game settings from payload (backward-compatible)
+        const games: RoomGameSettings = (payload as any).games ?? {
+            totalRounds: 5,
+            mode: "MANUAL" as const,
+            selectedGameIds: [payload.gameId || "reaction"],
+        };
 
-    // Validate game settings
-    if (games.totalRounds < 1 || games.totalRounds > 20) {
-        ws.send(JSON.stringify({ type: "ERROR", payload: { message: "totalRounds deve ser entre 1 e 20." } }));
-        return;
-    }
+        // Ensure roundsPerGame exists
+        if (!games.roundsPerGame) games.roundsPerGame = {};
 
-
-    if (games.mode === "MANUAL") {
-        if (!games.selectedGameIds || games.selectedGameIds.length === 0) {
-            ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Selecione pelo menos 1 jogo." } }));
+        // Validate game settings
+        if (games.totalRounds < 1 || games.totalRounds > 20) {
+            ws.send(JSON.stringify({ type: "ERROR", payload: { message: "totalRounds deve ser entre 1 e 20." } }));
             return;
         }
-        console.log("asdasd")
 
-        for (const gid of games.selectedGameIds) {
-            if (!await getGameById(gid)) {
-                ws.send(JSON.stringify({ type: "ERROR", payload: { message: `Jogo "${gid}" não encontrado.` } }));
+        // Clamp per-game round values
+        for (const [gid, rounds] of Object.entries(games.roundsPerGame)) {
+            games.roundsPerGame[gid] = Math.max(1, Math.min(20, rounds));
+        }
+
+
+        if (games.mode === "MANUAL") {
+            if (!games.selectedGameIds || games.selectedGameIds.length === 0) {
+                ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Selecione pelo menos 1 jogo." } }));
                 return;
             }
+            for (const gid of games.selectedGameIds) {
+                if (!await getGameById(gid)) {
+                    ws.send(JSON.stringify({ type: "ERROR", payload: { message: `Jogo "${gid}" não encontrado.` } }));
+                    return;
+                }
 
+            }
         }
+        if (games.mode === "RANDOM") {
+            games.selectedGameIds = await pickRandomGames(1);
+        }
+
+        const player: LivePlayer = {
+            id: playerId,
+            nickname: payload.nickname.trim().slice(0, 20) || "Player",
+            score: 0,
+            status: "waiting",
+            isHost: true,
+            userId: data.userId,
+            avatarUrl: null,
+            ws,
+        };
+
+        const room: LiveRoom = {
+            id: roomId,
+            hostId: playerId,
+            players: [player],
+            state: "lobby",
+            maxPlayers: Math.min(Math.max(payload.maxPlayers, 2), 8),
+            isPrivate: !!(payload as any).isPrivate,
+            gameId: games.selectedGameIds[0] || "reaction",
+            games,
+            currentGameIndex: 0,
+            gameState: null,
+            engine: null,
+        };
+
+        setRoom(room);
+        data.roomId = roomId;
+        setWsData(ws, data);
+
+        sendTo(player, { type: "JOINED", payload: { playerId, roomId } });
+        sendTo(player, { type: "ROOM_UPDATE", payload: { room: roomSnapshot(room) } });
+
+        console.log(`[room] ${roomId} created by ${player.nickname} (${games.totalRounds} rounds, mode=${games.mode})`);
+    } catch (err) {
+        console.error("[room] create error:", err);
+        ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Erro ao criar sala." } }));
     }
-    if (games.mode === "RANDOM") {
-        games.selectedGameIds = await pickRandomGames(games.totalRounds);
-    }
-
-    const player: LivePlayer = {
-        id: playerId,
-        nickname: payload.nickname.trim().slice(0, 20) || "Player",
-        score: 0,
-        status: "waiting",
-        isHost: true,
-        userId: data.userId,
-        avatarUrl: null,
-        ws,
-    };
-
-    const room: LiveRoom = {
-        id: roomId,
-        hostId: playerId,
-        players: [player],
-        state: "lobby",
-        maxPlayers: Math.min(Math.max(payload.maxPlayers, 2), 8),
-        isPrivate: !!(payload as any).isPrivate,
-        gameId: games.selectedGameIds[0] || "reaction",
-        games,
-        currentGameIndex: 0,
-        gameState: null,
-        engine: null,
-    };
-
-    setRoom(room);
-    data.roomId = roomId;
-    setWsData(ws, data);
-
-    sendTo(player, { type: "JOINED", payload: { playerId, roomId } });
-    sendTo(player, { type: "ROOM_UPDATE", payload: { room: roomSnapshot(room) } });
-
-    console.log(`[room] ${roomId} created by ${player.nickname} (${games.totalRounds} rounds, mode=${games.mode})`);
 }
 
 // ─── JOIN_ROOM ──────────────────────────────────────────────────────────────
@@ -185,16 +196,18 @@ export function handleSetReady(ws: WebSocket) {
 
 export function handleStartGame(ws: WebSocket) {
     const data = getWsData(ws);
-    const room = getRoom(data.roomId ?? "");
-    if (!room || room.state !== "lobby") return;
-    if (room.hostId !== data.id) {
+    const maybeRoom = getRoom(data.roomId ?? "");
+    if (!maybeRoom || maybeRoom.state !== "lobby") return;
+    if (maybeRoom.hostId !== data.id) {
         ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Apenas o host pode iniciar." } }));
         return;
     }
-    if (room.players.length < 2) {
+    if (maybeRoom.players.length < 2) {
         ws.send(JSON.stringify({ type: "ERROR", payload: { message: "São necessários pelo menos 2 jogadores." } }));
         return;
     }
+
+    const room = maybeRoom;
 
     room.state = "playing";
 
@@ -204,18 +217,46 @@ export function handleStartGame(ws: WebSocket) {
         p.status = "playing";
     }
 
+    const schedule = room.games.selectedGameIds;
+    const numGames = schedule.length;
+
     // Broadcast game order
     broadcast(room, {
         type: "ROOM_GAMES_DEFINED",
         payload: {
             totalRounds: room.games.totalRounds,
-            gameOrder: room.games.selectedGameIds,
+            gameOrder: schedule,
         },
     });
 
-    const engine = createEngine(
-        room.gameId,
-        room.players.map((p) => ({
+    // Cumulative scores across all game sessions
+    const cumulativeScores: Record<string, number> = {};
+    for (const p of room.players) cumulativeScores[p.id] = 0;
+
+    room.currentGameIndex = 0;
+    room.gameId = schedule[0] || "reaction";
+
+    function startGameAtIndex(index: number) {
+        const gameId = schedule[index]!;
+        room.currentGameIndex = index;
+        room.gameId = gameId;
+
+        // Determine rounds for this game segment
+        const roundsForGame = room.games.mode === "MANUAL"
+            ? (room.games.roundsPerGame?.[gameId] ?? room.games.totalRounds)
+            : room.games.totalRounds;
+
+        if (room.engine) {
+            room.engine.destroy();
+            room.engine = null;
+        }
+
+        // Reset player status for new game segment
+        for (const p of room.players) {
+            p.status = "playing";
+        }
+
+        const playerSnapshots = room.players.map((p) => ({
             id: p.id,
             nickname: p.nickname,
             score: p.score,
@@ -223,52 +264,107 @@ export function handleStartGame(ws: WebSocket) {
             isHost: p.isHost,
             userId: p.userId,
             avatarUrl: p.avatarUrl,
-        })),
-        async (msg) => {
-            // Sync scores back to room players on GAME_STATE / GAME_END
-            if (msg.type === "GAME_STATE") {
-                for (const p of room.players) {
-                    p.score = msg.payload.gameState.scores[p.id] ?? p.score;
-                }
-            }
-            if (msg.type === "GAME_END") {
-                room.state = "finished";
-                for (const p of room.players) {
-                    p.score = msg.payload.scores[p.id] ?? p.score;
-                    p.status = "finished";
-                }
+        }));
 
-                // ── Award coins ─────────────────────────────────────────
-                for (const p of room.players) {
-                    if (!p.userId) continue; // guest — no coins
-
-                    const isWinner = p.id === msg.payload.mvp;
-                    const reason = isWinner ? "VICTORY" as const : "PARTICIPATION" as const;
-                    const result = await awardCoins(p.userId, reason, room.id);
-
-                    if (result) {
-                        sendTo(p, {
-                            type: "COINS_UPDATE",
-                            payload: {
-                                userId: result.userId,
-                                coins: result.newBalance,
-                                delta: result.delta,
-                                reason: result.reason,
-                            },
-                        });
+        const engine = createEngine(
+            gameId,
+            playerSnapshots,
+            async (msg) => {
+                if (msg.type === "GAME_STATE") {
+                    // Room scores = cumulative + current engine scores
+                    for (const p of room.players) {
+                        const engineScore = msg.payload.gameState.scores[p.id] ?? 0;
+                        p.score = (cumulativeScores[p.id] ?? 0) + engineScore;
                     }
+                    broadcast(room, msg);
+                    return;
                 }
-            }
-            broadcast(room, msg);
-        },
-        room.games.totalRounds,
-    );
 
-    room.engine = engine;
+                if (msg.type === "GAME_END") {
+                    const isLastGame = index >= numGames - 1;
+
+                    // Accumulate scores from this game segment
+                    for (const p of room.players) {
+                        const engineScore = msg.payload.scores[p.id] ?? 0;
+                        cumulativeScores[p.id] = (cumulativeScores[p.id] ?? 0) + engineScore;
+                        p.score = cumulativeScores[p.id]!;
+                    }
+
+                    if (!isLastGame) {
+                        // Intermediate game — don't send GAME_END to clients.
+                        // The engine's "game_over" phase GAME_STATE already shows
+                        // "calculando…" on the client. After a brief pause, start
+                        // the next game whose countdown will naturally take over.
+                        setRoom(room);
+                        setTimeout(() => {
+                            if (room.state !== "playing") return;
+                            startGameAtIndex(index + 1);
+                            broadcast(room, { type: "ROOM_UPDATE", payload: { room: roomSnapshot(room) } });
+                        }, 2500);
+                        return;
+                    }
+
+                    // ── Last game — finish the match ────────────────────
+                    room.state = "finished";
+                    for (const p of room.players) {
+                        p.status = "finished";
+                    }
+
+                    // Determine overall MVP from cumulative scores
+                    let mvp: string | null = null;
+                    let bestScore = -1;
+                    for (const [id, score] of Object.entries(cumulativeScores)) {
+                        if (score > bestScore) {
+                            bestScore = score;
+                            mvp = id;
+                        }
+                    }
+
+                    const finalResults = {
+                        scores: { ...cumulativeScores },
+                        rounds: msg.payload.rounds,
+                        mvp,
+                    };
+
+                    // ── Award coins ─────────────────────────────────────
+                    for (const p of room.players) {
+                        if (!p.userId) continue; // guest — no coins
+
+                        const isWinner = p.id === mvp;
+                        const reason = isWinner ? "VICTORY" as const : "PARTICIPATION" as const;
+                        const result = await awardCoins(p.userId, reason, room.id);
+
+                        if (result) {
+                            sendTo(p, {
+                                type: "COINS_UPDATE",
+                                payload: {
+                                    userId: result.userId,
+                                    coins: result.newBalance,
+                                    delta: result.delta,
+                                    reason: result.reason,
+                                },
+                            });
+                        }
+                    }
+
+                    broadcast(room, { type: "GAME_END", payload: finalResults });
+                    return;
+                }
+
+                // Other messages — forward as-is
+                broadcast(room, msg);
+            },
+            roundsForGame,
+        );
+
+        room.engine = engine;
+        engine.init();
+    }
+
+    startGameAtIndex(0);
     broadcast(room, { type: "ROOM_UPDATE", payload: { room: roomSnapshot(room) } });
-
-    engine.init();
-    console.log(`[game] ${room.id} started`);
+    setRoom(room);
+    console.log(`[game] ${room.id} started (${numGames} game(s), ${room.games.totalRounds} rounds each)`);
 }
 
 // ─── PLAYER_ACTION ──────────────────────────────────────────────────────────

@@ -44,7 +44,9 @@ export type ServerMessage =
     /** Notifies coin reward at end of match */
     | { type: "COINS_UPDATE"; payload: { userId: string; coins: number; delta: number; reason: string } }
     /** List of public rooms in lobby state */
-    | { type: "ROOM_LIST"; payload: { rooms: PublicRoomInfo[] } };
+    | { type: "ROOM_LIST"; payload: { rooms: PublicRoomInfo[] } }
+    /** Chat message from another player */
+    | { type: "CHAT_MESSAGE"; payload: { playerId: string; message: string } };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

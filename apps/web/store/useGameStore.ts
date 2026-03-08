@@ -26,6 +26,7 @@ interface GameStore {
     availableGames: Game[];
     selectedGameIds: string[];
     totalRounds: number;
+    roundsPerGame: Record<string, number>;
     selectionMode: GameSelectionMode;
     gameOrder: string[];           // from ROOM_GAMES_DEFINED
 
@@ -45,6 +46,7 @@ interface GameStore {
     fetchGames: () => Promise<void>;
     setSelectionMode: (mode: GameSelectionMode) => void;
     setTotalRounds: (n: number) => void;
+    setGameRounds: (gameId: string, n: number) => void;
     toggleGameSelection: (gameId: string) => void;
 
     // ── High-level helpers ────────────────────────────────────────────────────
@@ -92,6 +94,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     availableGames: [],
     selectedGameIds: ["reaction"],
     totalRounds: 3,
+    roundsPerGame: {},
     selectionMode: "MANUAL",
     gameOrder: [],
     lastCoinUpdate: null,
@@ -112,6 +115,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     setSelectionMode: (mode) => set({ selectionMode: mode }),
     setTotalRounds: (n) => set({ totalRounds: Math.max(1, Math.min(20, n)) }),
+    setGameRounds: (gameId, n) => {
+        const clamped = Math.max(1, Math.min(20, n));
+        set({ roundsPerGame: { ...get().roundsPerGame, [gameId]: clamped } });
+    },
     toggleGameSelection: (gameId) => {
         const current = get().selectedGameIds;
         if (current.includes(gameId)) {
@@ -133,7 +140,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
             onOpen?.();
             return;
         }
-        if (existing && existing.readyState < WebSocket.CLOSING) return;
+        if (existing && existing.readyState === WebSocket.CONNECTING) {
+            if (onOpen) {
+                existing.onopen = () => {
+                    set({ status: "connected" });
+                    onOpen();
+                };
+            }
+            return;
+        }
 
         const url = getWsUrl();
         if (!url) return;
@@ -183,7 +198,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     createRoom: (nickname, maxPlayers, gameSettings, isPrivate) => {
-        const { connect, send, setNickname, totalRounds, selectionMode, selectedGameIds } = get();
+        const { connect, send, setNickname, totalRounds, selectionMode, selectedGameIds, roundsPerGame } = get();
         setNickname(nickname);
         set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null });
 
@@ -191,6 +206,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             totalRounds,
             mode: selectionMode,
             selectedGameIds: selectionMode === "MANUAL" ? selectedGameIds : [],
+            roundsPerGame: selectionMode === "MANUAL" ? roundsPerGame : undefined,
         };
 
         connect(() => {
@@ -226,6 +242,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         } catch {
             // ignore
         }
+    },
+
+    sendChatMessage: async (message: string) => {
+        get().sendAction("CHAT_MESSAGE", { message });
     },
 
     setReady: () => get().send({ type: "SET_READY" }),
