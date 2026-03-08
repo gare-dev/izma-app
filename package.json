@@ -11,12 +11,15 @@
     "dev:web": "cd apps/web && npm run dev",
     "dev:server": "bun --env-file apps/server/.env --watch apps/server/src/index.ts",
     "build:web": "bun run --cwd apps/web build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "bunx biome check .",
     "format": "bunx biome format . --write"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.4",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "vitest": "^4.0.18"
   },
   "peerDependencies": {
     "typescript": "^5"
