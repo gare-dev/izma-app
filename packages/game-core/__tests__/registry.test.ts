@@ -14,7 +14,7 @@ describe("game-core registry", () => {
     it("throws when creating an unregistered engine", async () => {
         const { createEngine } = await import("../registry");
         const players = [
-            { id: "p1", nickname: "A", score: 0, status: "playing" as const, isHost: true, userId: null, avatarUrl: null },
+            { id: "p1", nickname: "A", score: 0, status: "playing" as const, isHost: true, userId: null, avatarUrl: null, bio: null },
         ];
         expect(() => createEngine("nonexistent", players, () => { }, 3)).toThrow(
             /No engine registered for "nonexistent"/,

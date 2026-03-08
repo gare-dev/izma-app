@@ -22,6 +22,7 @@ import { getWsData, setWsData } from "./ws-data.ts";
 import { verifyToken } from "./modules/auth/jwt.service.ts";
 import { getGameById, pickRandomGames } from "./modules/games/games.service.ts";
 import { awardCoins, COINS } from "./modules/coins/coin.service.ts";
+import { getUserById } from "./modules/auth/auth.service.ts";
 import type { RoomGameSettings } from "@izma/types";
 
 // ─── AUTH (over WebSocket) ──────────────────────────────────────────────────
@@ -95,6 +96,8 @@ export async function handleCreateRoom(
             games.selectedGameIds = await pickRandomGames(1);
         }
 
+        const dbUser = data.userId ? await getUserById(data.userId) : null;
+
         const player: LivePlayer = {
             id: playerId,
             nickname: payload.nickname.trim().slice(0, 20) || "Player",
@@ -102,7 +105,8 @@ export async function handleCreateRoom(
             status: "waiting",
             isHost: true,
             userId: data.userId,
-            avatarUrl: null,
+            avatarUrl: dbUser?.avatarUrl ?? null,
+            bio: dbUser?.bio ?? null,
             ws,
         };
 
@@ -136,7 +140,7 @@ export async function handleCreateRoom(
 
 // ─── JOIN_ROOM ──────────────────────────────────────────────────────────────
 
-export function handleJoinRoom(
+export async function handleJoinRoom(
     ws: WebSocket,
     payload: Extract<ClientMessage, { type: "JOIN_ROOM" }>["payload"],
 ) {
@@ -157,6 +161,8 @@ export function handleJoinRoom(
     }
 
     const playerId = data.id;
+    const dbUser = data.userId ? await getUserById(data.userId) : null;
+
     const player: LivePlayer = {
         id: playerId,
         nickname: payload.nickname.trim().slice(0, 20) || "Player",
@@ -164,7 +170,8 @@ export function handleJoinRoom(
         status: "waiting",
         isHost: false,
         userId: data.userId,
-        avatarUrl: null,
+        avatarUrl: dbUser?.avatarUrl ?? null,
+        bio: dbUser?.bio ?? null,
         ws,
     };
 
@@ -264,6 +271,7 @@ export function handleStartGame(ws: WebSocket) {
             isHost: p.isHost,
             userId: p.userId,
             avatarUrl: p.avatarUrl,
+            bio: p.bio,
         }));
 
         const engine = createEngine(
@@ -487,6 +495,7 @@ export async function handleReconnect(ws: WebSocket) {
         isHost: room.players.length === 0, // host if first back
         userId: data.userId,
         avatarUrl: oldData?.avatarUrl ?? null,
+        bio: oldData?.bio ?? null,
         ws,
     };
 

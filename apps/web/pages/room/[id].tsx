@@ -38,18 +38,35 @@ export default function RoomPage() {
         tryReconnect,
     } = useGameStore();
 
-    // const { hydrate } = useAuthStore();
+    const { user, checkAuth } = useAuthStore();
+    const isLoggedIn = !!user;
 
-    // Hydrate auth store
-    // useEffect(() => { hydrate(); }, [hydrate]);
+    // Check auth on mount
+    useEffect(() => { checkAuth(); }, [checkAuth]);
 
     // If user arrives via share link without being connected
     const [joinNickname, setJoinNickname] = useState("");
     const [joinError, setJoinError] = useState<string | null>(null);
     const [joining, setJoining] = useState(false);
 
+    // Sync nickname from logged-in user
+    useEffect(() => {
+        if (user) setJoinNickname(user.username);
+    }, [user]);
+
     const isConnected = status === "connected";
     const hasJoined = !!room && !!playerId;
+
+    // Auto-join when logged in and not yet joined (share-link flow)
+    const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
+    useEffect(() => {
+        if (isLoggedIn && roomId && !hasJoined && !autoJoinAttempted && (status === "idle" || status === "connected")) {
+            setAutoJoinAttempted(true);
+            setJoining(true);
+            clearError();
+            joinRoom(roomId, user!.username);
+        }
+    }, [isLoggedIn, roomId, hasJoined, autoJoinAttempted, status, joinRoom, clearError, user]);
 
     // Auto-reconnect on page load (e.g. after refresh / connection loss)
     useEffect(() => {
@@ -102,6 +119,31 @@ export default function RoomPage() {
 
     // ── Not yet joined ────────────────────────────────────────────────────────
     if (!hasJoined) {
+        // Logged-in users auto-join; show loading or error
+        if (isLoggedIn) {
+            return (
+                <>
+                    <Head><title>IZMA — Entrar na Sala</title></Head>
+                    <div className={styles.page}>
+                        <div className={styles.joinCard}>
+                            <div className={styles.joinLogo}>⚡ IZMA</div>
+                            {error ? (
+                                <>
+                                    <p className={styles.joinCode} style={{ color: "var(--accent)" }}>⚠ {error}</p>
+                                    <Button type="button" variant="secondary" fullWidth onClick={() => router.push("/")}>
+                                        Voltar
+                                    </Button>
+                                </>
+                            ) : (
+                                <p className={styles.joinCode}>Entrando como <strong>{user!.username}</strong>…</p>
+                            )}
+                        </div>
+                    </div>
+                </>
+            );
+        }
+
+        // Guest: show nickname form
         return (
             <>
                 <Head><title>IZMA — Entrar na Sala</title></Head>
@@ -163,9 +205,6 @@ export default function RoomPage() {
                 <div className={styles.page}>
                     <div className={styles.gameHeader}>
                         <ScoreBar room={room} gameState={gameState} currentPlayerId={playerId} />
-                        <span className={styles.roundIndicator}>
-                            Rodada {gameState.round}/{gameState.totalRounds}
-                        </span>
                     </div>
                     <div className={styles.gameArea}>
                         {GameComponent ? (

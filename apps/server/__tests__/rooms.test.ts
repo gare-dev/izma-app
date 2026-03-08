@@ -39,6 +39,7 @@ function makeLivePlayer(id: string, opts: Partial<LivePlayer> = {}): LivePlayer 
         isHost: opts.isHost ?? false,
         userId: opts.userId ?? null,
         avatarUrl: opts.avatarUrl ?? null,
+        bio: opts.bio ?? null,
         ws: opts.ws ?? mockWs(),
     };
 }

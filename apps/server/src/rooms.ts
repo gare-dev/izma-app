@@ -35,6 +35,7 @@ function serializeRoom(room: LiveRoom): string {
             isHost: p.isHost,
             userId: p.userId,
             avatarUrl: p.avatarUrl,
+            bio: p.bio,
         })),
     });
 }
@@ -106,6 +107,7 @@ export function saveDisconnectedPlayer(roomId: string, userId: string, player: L
         isHost: player.isHost,
         userId: player.userId,
         avatarUrl: player.avatarUrl,
+        bio: player.bio,
     });
     redis.set(disconnectedPlayerKey(roomId, userId), data, "EX", ROOM_EXPIRY).catch(() => { });
 }
@@ -164,6 +166,7 @@ export function roomSnapshot(room: LiveRoom): import("@izma/types").Room {
             isHost: p.isHost,
             userId: p.userId,
             avatarUrl: p.avatarUrl,
+            bio: p.bio,
         })),
     };
 }

@@ -12,6 +12,7 @@ function makePlayers(count: number): Player[] {
         isHost: i === 0,
         userId: null,
         avatarUrl: null,
+        bio: null,
     }));
 }
 

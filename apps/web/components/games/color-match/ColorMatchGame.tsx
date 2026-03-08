@@ -38,10 +38,6 @@ export default function ColorMatchGame({ room, gameState: rawState, playerId, on
     if (gameState.phase === "showing") {
         return (
             <div className={styles.colorArena}>
-                <div className={styles.roundBadge}>
-                    Rodada {gameState.round}/{gameState.totalRounds}
-                </div>
-
                 <p className={styles.instruction}>Qual é a palavra escrita?</p>
 
                 <div
@@ -71,10 +67,6 @@ export default function ColorMatchGame({ room, gameState: rawState, playerId, on
     if (gameState.phase === "round_result") {
         return (
             <div className={styles.center}>
-                <div className={styles.roundBadge} style={{ marginBottom: "1rem" }}>
-                    Rodada {gameState.round}/{gameState.totalRounds}
-                </div>
-
                 <p className={styles.hint}>
                     Resposta: <strong>{gameState.correctAnswer}</strong>
                 </p>

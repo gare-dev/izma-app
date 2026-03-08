@@ -48,7 +48,6 @@ export default function ReactionGame({ room, gameState: rawState, playerId, onAc
                 onClick={handleClick}
                 aria-label="Área de reação"
             >
-                <div className={styles.roundBadge}>Rodada {gameState.round}/{gameState.totalRounds}</div>
                 <div className={styles.waitText}>Aguarde…</div>
                 <p className={styles.subHint}>Não clique ainda!</p>
             </button>
@@ -63,7 +62,6 @@ export default function ReactionGame({ room, gameState: rawState, playerId, onAc
                 onClick={handleClick}
                 aria-label="CLIQUE AGORA"
             >
-                <div className={styles.roundBadge}>Rodada {gameState.round}/{gameState.totalRounds}</div>
                 <div className={styles.reactText}>AGORA!</div>
                 <p className={styles.subHint}>Clique o mais rápido possível!</p>
             </button>
@@ -74,10 +72,6 @@ export default function ReactionGame({ room, gameState: rawState, playerId, onAc
     if (gameState.phase === "round_result") {
         return (
             <div className={styles.center}>
-                <div className={styles.roundBadge} style={{ marginBottom: "1rem" }}>
-                    Rodada {gameState.round}/{gameState.totalRounds}
-                </div>
-
                 {falseStarter ? (
                     <div className={styles.resultCard} data-outcome={iAmFalseStarter ? "self-false" : "false"}>
                         <span className={styles.resultIcon}>💥</span>
