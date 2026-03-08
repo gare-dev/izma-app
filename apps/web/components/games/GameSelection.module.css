@@ -2,13 +2,12 @@
 
 .card {
     display: flex;
-    align-items: center;
-    gap: 0.85rem;
+    flex-direction: column;
+    gap: 0.75rem;
     background: var(--bg-card);
     border: 2px solid var(--border);
     border-radius: 16px;
     padding: 1rem 1.15rem;
-    cursor: pointer;
     transition: border-color 150ms, background 150ms, transform 80ms;
     user-select: none;
 }
@@ -19,6 +18,14 @@
 
 .card:active {
     transform: scale(0.98);
+}
+
+.cardMain {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    cursor: pointer;
+    width: 100%;
 }
 
 .selected {
@@ -129,7 +136,10 @@
 .roundsRow {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.6rem;
 }
 
 .roundsLabel {

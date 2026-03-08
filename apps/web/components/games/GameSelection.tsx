@@ -16,24 +16,34 @@ interface GameCardProps {
     selected: boolean;
     onToggle: () => void;
     disabled?: boolean;
+    rounds?: number;
+    onRoundsChange?: (n: number) => void;
 }
 
-function GameCard({ game, selected, onToggle, disabled }: GameCardProps) {
+function GameCard({ game, selected, onToggle, disabled, rounds, onRoundsChange }: GameCardProps) {
     return (
         <div
             className={`${styles.card} ${selected ? styles.selected : ""}`}
-            onClick={disabled ? undefined : onToggle}
             role="checkbox"
             aria-checked={selected}
         >
-            <div className={styles.thumb}>{GAME_ICONS[game.id] ?? "🎮"}</div>
-            <div className={styles.info}>
-                <span className={styles.name}>{game.name}</span>
-                <span className={styles.desc}>{game.description}</span>
+            <div className={styles.cardMain} onClick={disabled ? undefined : onToggle}>
+                <div className={styles.thumb}>{GAME_ICONS[game.id] ?? "🎮"}</div>
+                <div className={styles.info}>
+                    <span className={styles.name}>{game.name}</span>
+                    <span className={styles.desc}>{game.description}</span>
+                </div>
+                <div className={`${styles.check} ${selected ? styles.checkSelected : ""}`}>
+                    {selected ? "✓" : ""}
+                </div>
             </div>
-            <div className={`${styles.check} ${selected ? styles.checkSelected : ""}`}>
-                {selected ? "✓" : ""}
-            </div>
+            {selected && rounds != null && onRoundsChange && (
+                <RoundsStepper
+                    label="Rodadas:"
+                    value={rounds}
+                    onChange={onRoundsChange}
+                />
+            )}
         </div>
     );
 }
@@ -100,21 +110,14 @@ export default function GameSelection() {
                     <span className={styles.panelTitle}>Minigames</span>
                     <div className={styles.gameList}>
                         {gameList.map((g) => (
-                            <div key={g.id}>
-                                <GameCard
-                                    game={g}
-                                    selected={selectedGameIds.includes(g.id)}
-                                    onToggle={() => toggleGameSelection(g.id)}
-                                />
-                                {/* Per-game round stepper (only when selected) */}
-                                {selectedGameIds.includes(g.id) && (
-                                    <RoundsStepper
-                                        label={`Rodadas — ${g.name}:`}
-                                        value={roundsPerGame[g.id] ?? 3}
-                                        onChange={(n) => setGameRounds(g.id, n)}
-                                    />
-                                )}
-                            </div>
+                            <GameCard
+                                key={g.id}
+                                game={g}
+                                selected={selectedGameIds.includes(g.id)}
+                                onToggle={() => toggleGameSelection(g.id)}
+                                rounds={roundsPerGame[g.id] ?? 3}
+                                onRoundsChange={(n) => setGameRounds(g.id, n)}
+                            />
                         ))}
                     </div>
                 </>

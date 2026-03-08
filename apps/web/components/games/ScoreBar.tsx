@@ -13,6 +13,9 @@ interface ScoreBarProps {
 export default function ScoreBar({ room, gameState, currentPlayerId }: ScoreBarProps) {
     return (
         <div className={styles.scoreBar}>
+            <div className={styles.roundChip}>
+                Rodada {gameState.round}/{gameState.totalRounds}
+            </div>
             {room.players
                 .slice()
                 .sort((a, b) => (gameState.scores[b.id] ?? 0) - (gameState.scores[a.id] ?? 0))

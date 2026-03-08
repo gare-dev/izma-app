@@ -11,6 +11,7 @@ export interface Player {
     /** Authenticated user info (null = guest) */
     userId: string | null;
     avatarUrl: string | null;
+    bio: string | null;
 }
 
 // ─── User ──────────────────────────────────────────────────────────────────

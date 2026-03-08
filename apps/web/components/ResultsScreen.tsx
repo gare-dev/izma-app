@@ -73,8 +73,8 @@ export default function ResultsScreen({ room, results, onPlayAgain, onLeave }: R
                                         {falseStarter
                                             ? `💥 ${falseStarter.nickname} saiu cedo`
                                             : winner
-                                                ? `⚡ ${winner.nickname} — ${r.reactionTime}ms`
-                                                : "⏱ Sem reação"}
+                                                ? `⚡ ${winner.nickname}${r.reactionTime != null ? ` — ${r.reactionTime}ms` : ""}`
+                                                : "⏱ Sem vencedor"}
                                     </span>
                                 </div>
                             );
