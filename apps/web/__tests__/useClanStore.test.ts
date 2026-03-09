@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+// Stub WebSocket for Node/CI environments
+if (typeof globalThis.WebSocket === "undefined") {
+    vi.stubGlobal("WebSocket", { OPEN: 1, CONNECTING: 0, CLOSING: 2, CLOSED: 3 });
+}
+
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 vi.mock("@/lib/api", () => ({
