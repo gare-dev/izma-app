@@ -312,17 +312,19 @@ describe("useClanStore", () => {
     // ═══════════════════════════════════════════════════════════════════════
 
     describe("sendClanMessage", () => {
+        const WS_OPEN = 1; // WebSocket.OPEN
+
         it("returns false when ws is null", () => {
             expect(useClanStore.getState().sendClanMessage(null, "c1", "hi")).toBe(false);
         });
 
         it("returns false for empty text", () => {
-            const ws = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+            const ws = { readyState: WS_OPEN, send: vi.fn() } as unknown as WebSocket;
             expect(useClanStore.getState().sendClanMessage(ws, "c1", "   ")).toBe(false);
         });
 
         it("sends JSON over ws and returns true", () => {
-            const ws = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+            const ws = { readyState: WS_OPEN, send: vi.fn() } as unknown as WebSocket;
             expect(useClanStore.getState().sendClanMessage(ws, "c1", "hello")).toBe(true);
             expect(ws.send).toHaveBeenCalledWith(
                 expect.stringContaining('"type":"CLAN_CHAT"'),
@@ -330,7 +332,7 @@ describe("useClanStore", () => {
         });
 
         it("truncates message to 500 chars", () => {
-            const ws = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+            const ws = { readyState: WS_OPEN, send: vi.fn() } as unknown as WebSocket;
             const longMsg = "a".repeat(600);
             useClanStore.getState().sendClanMessage(ws, "c1", longMsg);
             const sent = JSON.parse((ws.send as any).mock.calls[0][0]);
@@ -338,7 +340,7 @@ describe("useClanStore", () => {
         });
 
         it("enforces flood protection", () => {
-            const ws = { readyState: WebSocket.OPEN, send: vi.fn() } as unknown as WebSocket;
+            const ws = { readyState: WS_OPEN, send: vi.fn() } as unknown as WebSocket;
             const store = useClanStore.getState();
             store.sendClanMessage(ws, "c1", "1");
             store.sendClanMessage(ws, "c1", "2");
