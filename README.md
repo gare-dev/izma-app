@@ -39,7 +39,7 @@ Uma contagem regressiva aparece... a tela fica vermelha... **ESPERE**... e quand
 
 ### 🎨 Color Match — Desafio de Cores
 
-Você vê a palavra **"Vermelho"** escrita em **azul**. Qual é a cor *escrita*? Pense rápido!
+Você vê a palavra **"Vermelho"** escrita em **azul**. Qual é a cor _escrita_? Pense rápido!
 
 - Baseado no clássico efeito Stroop — sua mente vai tentar te enganar
 - 5 segundos para responder, 4 opções embaralhadas
@@ -91,10 +91,10 @@ Cada vitória e participação rende **moedas**. Elas são o coração da progre
 
 Dois leaderboards para provar quem é o melhor:
 
-| Ranking | O que mede |
-|---|---|
-| 🪙 **Moedas** | Total de moedas acumuladas (all-time) |
-| ⚔️ **Vitórias** | Número de vitórias por período |
+| Ranking         | O que mede                            |
+| --------------- | ------------------------------------- |
+| 🪙 **Moedas**   | Total de moedas acumuladas (all-time) |
+| ⚔️ **Vitórias** | Número de vitórias por período        |
 
 O ranking de vitórias tem filtros por **Diário**, **Semanal**, **Mensal** e **Geral**.  
 Os 3 melhores ganham medalhas: 🥇🥈🥉
@@ -107,11 +107,11 @@ Monte sua equipe! O sistema de clãs do IZMA permite criar comunidades com ident
 
 **Modos de entrada:**
 
-| Modo | Descrição |
-|---|---|
-| 🟢 **Público** | Qualquer um entra livremente |
+| Modo             | Descrição                                  |
+| ---------------- | ------------------------------------------ |
+| 🟢 **Público**   | Qualquer um entra livremente               |
 | 🟡 **Aprovação** | Envie solicitação, o dono aceita ou recusa |
-| 🔴 **Privado** | Apenas por código de convite |
+| 🔴 **Privado**   | Apenas por código de convite               |
 
 **O que você pode fazer no clã:**
 
@@ -132,10 +132,13 @@ Converse com todos que estão online diretamente da página inicial. Veja userna
 ## 👤 Perfis
 
 ### Convidado
+
 Entre com apenas um apelido e comece a jogar **agora mesmo**. Sem cadastro, sem e-mail, sem espera.
 
 ### Conta registrada
+
 Crie sua conta para desbloquear tudo:
+
 - ✏️ Avatar e bio personalizáveis
 - 💰 Acumule moedas entre sessões
 - 🏰 Crie ou participe de clãs
@@ -179,6 +182,6 @@ Interface mobile-first com cards arredondados, emojis intuitivos e navegação s
 
 <br/>
 
-*IZMA — Rápido, competitivo, social.*
+_IZMA — Rápido, competitivo, social._
 
 </div>

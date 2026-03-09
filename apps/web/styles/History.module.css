@@ -1,0 +1,251 @@
+/* ─── Match History page ────────────────────────────────────────────────────── */
+
+.page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100dvh;
+    padding: 2rem 1.25rem 4rem;
+    gap: 1.5rem;
+}
+
+/* ── Header ── */
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 520px;
+}
+
+.logo {
+    font-size: 1.8rem;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    background: linear-gradient(135deg, #a855f7 0%, #f43f5e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    cursor: pointer;
+}
+
+.backBtn {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms;
+}
+
+.backBtn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--primary);
+    color: var(--text);
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    text-align: center;
+    color: var(--text);
+}
+
+/* ── Match list ── */
+
+.matchList {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.empty {
+    text-align: center;
+    color: var(--text-subtle);
+    padding: 3rem 0;
+    font-size: 0.95rem;
+}
+
+/* ── Match card ── */
+
+.matchCard {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    transition: background 120ms;
+}
+
+.matchCard:hover {
+    background: var(--bg-card-hover);
+}
+
+.matchHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.matchGames {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.gameTag {
+    padding: 0.2rem 0.55rem;
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--primary-hover);
+    text-transform: capitalize;
+}
+
+.matchDate {
+    font-size: 0.75rem;
+    color: var(--text-subtle);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Player rows inside card ── */
+
+.playerList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.playerRow {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.4rem 0.55rem;
+    border-radius: 10px;
+    transition: background 80ms;
+}
+
+.playerRow:hover {
+    background: var(--bg-elevated);
+}
+
+.playerSelf {
+    background: rgba(124, 58, 237, 0.08);
+    border: 1px solid rgba(124, 58, 237, 0.18);
+}
+
+.position {
+    width: 1.6rem;
+    text-align: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.positionGold {
+    color: #fbbf24;
+}
+
+.positionSilver {
+    color: #94a3b8;
+}
+
+.positionBronze {
+    color: #cd7f32;
+}
+
+.playerName {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.88rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mvpBadge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    color: #1a1a2e;
+    padding: 0.1rem 0.4rem;
+    border-radius: 6px;
+    flex-shrink: 0;
+}
+
+.playerScore {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--primary-hover);
+    flex-shrink: 0;
+}
+
+/* ── Load more ── */
+
+.loadMore {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    justify-content: center;
+}
+
+.loadMoreBtn {
+    padding: 0.6rem 1.8rem;
+    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 150ms;
+}
+
+.loadMoreBtn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--primary);
+    color: var(--text);
+}
+
+.loadMoreBtn:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* ── Loading ── */
+
+.loading {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 0;
+}
+
+/* ── Guest message ── */
+
+.guestMsg {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-subtle);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.guestMsg a {
+    color: var(--primary-hover);
+    text-decoration: underline;
+    cursor: pointer;
+}

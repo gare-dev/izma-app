@@ -256,6 +256,26 @@ export interface PublicClanInfo {
     memberCount: number;
 }
 
+// ─── Match History ─────────────────────────────────────────────────────────
+
+export interface MatchPlayerSummary {
+    userId: string;
+    nickname: string;
+    score: number;
+    position: number;
+    isMvp: boolean;
+}
+
+export interface MatchSummary {
+    id: string;
+    roomId: string;
+    gameIds: string[];
+    playerCount: number;
+    mvpUserId: string | null;
+    playedAt: string; // ISO 8601
+    players: MatchPlayerSummary[];
+}
+
 // ─── API Error ─────────────────────────────────────────────────────────────
 
 export interface ApiError {

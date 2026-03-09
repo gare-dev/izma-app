@@ -24,6 +24,7 @@ import { getGameById, pickRandomGames } from "./modules/games/games.service.ts";
 import { awardCoins, COINS } from "./modules/coins/coin.service.ts";
 import { getUserById } from "./modules/auth/auth.service.ts";
 import { saveClanMessage, isClanMember } from "./modules/clans/clan.service.ts";
+import { saveMatch } from "./modules/matches/match.service.ts";
 import type { RoomGameSettings } from "@izma/types";
 
 // ─── Global chat state ──────────────────────────────────────────────────────
@@ -371,6 +372,30 @@ export function handleStartGame(ws: WebSocket) {
                                 },
                             });
                         }
+                    }
+
+                    // ── Save match history ──────────────────────────────
+                    try {
+                        const registeredPlayers = room.players
+                            .filter((p) => p.userId)
+                            .map((p) => ({
+                                userId: p.userId!,
+                                nickname: p.nickname,
+                                score: cumulativeScores[p.id] ?? 0,
+                            }))
+                            .sort((a, b) => b.score - a.score);
+
+                        if (registeredPlayers.length > 0) {
+                            const mvpPlayer = room.players.find((p) => p.id === mvp);
+                            await saveMatch({
+                                roomId: room.id,
+                                gameIds: room.games.selectedGameIds,
+                                players: registeredPlayers,
+                                mvpUserId: mvpPlayer?.userId ?? null,
+                            });
+                        }
+                    } catch (err) {
+                        console.error("[match-history] Failed to save match:", err);
                     }
 
                     broadcast(room, { type: "GAME_END", payload: finalResults });
