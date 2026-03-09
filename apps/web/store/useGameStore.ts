@@ -5,6 +5,15 @@ import { apiGetGames, apiGetPublicRooms } from "@/lib/api";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
+export interface RoomChatMessage {
+    playerId: string;
+    username: string;
+    avatarUrl: string | null;
+    bio: string | null;
+    message: string;
+    timestamp: number;
+}
+
 type ConnectStatus = "idle" | "connecting" | "connected" | "disconnected" | "error";
 
 interface GameStore {
@@ -36,6 +45,10 @@ interface GameStore {
     // ── Public rooms ──────────────────────────────────────────────────────────
     publicRooms: PublicRoomInfo[];
 
+    // ── Room chat ─────────────────────────────────────────────────────────────
+    roomMessages: RoomChatMessage[];
+    _roomChatLastSent: number[];
+
     // ── Actions ───────────────────────────────────────────────────────────────
     setNickname: (n: string) => void;
     connect: (onOpen?: () => void) => void;
@@ -58,6 +71,7 @@ interface GameStore {
     startGame: () => void;
     sendAction: (action: string, data?: unknown) => void;
     react: () => void;
+    sendRoomMessage: (text: string) => boolean;
     clearError: () => void;
     resetGame: () => void;
     tryReconnect: () => void;
@@ -99,6 +113,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     gameOrder: [],
     lastCoinUpdate: null,
     publicRooms: [],
+    roomMessages: [],
+    _roomChatLastSent: [],
 
     setNickname: (n) => set({ nickname: n }),
 
@@ -150,6 +166,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
             return;
         }
 
+        // If CLOSING, detach old handlers so they don't clobber the new socket
+        if (existing) {
+            existing.onopen = null;
+            existing.onmessage = null;
+            existing.onerror = null;
+            existing.onclose = null;
+        }
+
         const url = getWsUrl();
         if (!url) return;
 
@@ -176,16 +200,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
             }
         };
 
-        ws.onerror = () => set({ status: "error", error: "Erro de conexão." });
+        ws.onerror = () => {
+            // Only act if this is still the current socket
+            if (get().ws === ws) set({ status: "error", error: "Erro de conexão." });
+        };
 
         ws.onclose = () => {
-            set({ ws: null, status: "disconnected" });
+            // Only act if this is still the current socket
+            if (get().ws === ws) set({ ws: null, status: "disconnected" });
         };
     },
 
     disconnect: () => {
-        get().ws?.close();
-        set({ ws: null, status: "idle", room: null, gameState: null, gameResults: null, gameOrder: [], lastCoinUpdate: null });
+        const old = get().ws;
+        if (old) {
+            old.onopen = null;
+            old.onmessage = null;
+            old.onerror = null;
+            old.onclose = null;
+            old.close();
+        }
+        set({ ws: null, status: "idle", room: null, gameState: null, gameResults: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [] });
     },
 
     send: (msg) => {
@@ -200,7 +235,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     createRoom: (nickname, maxPlayers, gameSettings, isPrivate) => {
         const { connect, send, setNickname, totalRounds, selectionMode, selectedGameIds, roundsPerGame } = get();
         setNickname(nickname);
-        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null });
+        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [] });
 
         const games: RoomGameSettings = gameSettings ?? {
             totalRounds,
@@ -220,7 +255,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     joinRoom: (roomId, nickname) => {
         const { connect, send, setNickname } = get();
         setNickname(nickname);
-        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null });
+        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [] });
         connect(() => {
             send({ type: "JOIN_ROOM", payload: { roomId, nickname } });
         });
@@ -229,7 +264,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     joinRandomRoom: (nickname) => {
         const { connect, send, setNickname } = get();
         setNickname(nickname);
-        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null });
+        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [] });
         connect(() => {
             send({ type: "JOIN_RANDOM", payload: { nickname } });
         });
@@ -244,8 +279,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
     },
 
-    sendChatMessage: async (message: string) => {
-        get().sendAction("CHAT_MESSAGE", { message });
+    sendRoomMessage: (text: string): boolean => {
+        const { ws, status, _roomChatLastSent } = get();
+        if (!ws || status !== "connected") return false;
+        const trimmed = text.trim();
+        if (!trimmed || trimmed.length > 200) return false;
+        const now = Date.now();
+        const recent = _roomChatLastSent.filter((t) => t > now - 5_000);
+        if (recent.length >= 3) return false;
+        ws.send(JSON.stringify({ type: "ROOM_CHAT", payload: { message: trimmed } }));
+        set({ _roomChatLastSent: [...recent, now] });
+        return true;
     },
 
     setReady: () => get().send({ type: "SET_READY" }),
@@ -273,7 +317,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
 // ─── Message handler (called from ws.onmessage) ────────────────────────────
 
-function handleMessage(msg: ServerMessage) {
+async function handleMessage(msg: ServerMessage) {
     switch (msg.type) {
         case "JOINED":
             useGameStore.setState({ playerId: msg.payload.playerId });
@@ -317,5 +361,17 @@ function handleMessage(msg: ServerMessage) {
         case "ROOM_LIST":
             useGameStore.setState({ publicRooms: msg.payload.rooms });
             break;
+
+        case "ROOM_CHAT_MESSAGE":
+            useGameStore.setState((s) => ({
+                roomMessages: [...s.roomMessages.slice(-99), msg.payload],
+            }));
+            break;
+
+        case "CLAN_CHAT_MESSAGE": {
+            const { useClanStore } = await import("./useClanStore");
+            useClanStore.getState().addChatMessage(msg.payload);
+            break;
+        }
     }
 }

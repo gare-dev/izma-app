@@ -14,6 +14,12 @@ import type {
     ApiError,
     RankingsResponse,
     RankingPeriod,
+    Clan,
+    ClanDetail,
+    PublicClanInfo,
+    CreateClanDTO,
+    UpdateClanDTO,
+    ClanChatMessage,
 } from "@izma/types";
 
 function getBaseUrl(): string {
@@ -132,4 +138,87 @@ export async function apiGetTopCoins(): Promise<RankingsResponse> {
 
 export async function apiGetTopVictories(period: RankingPeriod = "all"): Promise<RankingsResponse> {
     return request<RankingsResponse>(`/rankings/victories?period=${period}`);
+}
+
+// ─── Clans ──────────────────────────────────────────────────────────────────
+
+export async function apiListClans(search?: string): Promise<PublicClanInfo[]> {
+    const qs = search ? `?search=${encodeURIComponent(search)}` : "";
+    return request<PublicClanInfo[]>(`/clans${qs}`);
+}
+
+export async function apiGetClan(id: string): Promise<ClanDetail> {
+    return request<ClanDetail>(`/clans/${id}`);
+}
+
+export async function apiGetMyClan(): Promise<ClanDetail | null> {
+    return request<ClanDetail | null>("/clans/me");
+}
+
+export async function apiCreateClan(dto: CreateClanDTO): Promise<Clan> {
+    return request<Clan>("/clans", {
+        method: "POST",
+        body: JSON.stringify(dto),
+    });
+}
+
+export async function apiUpdateClan(id: string, dto: UpdateClanDTO): Promise<Clan> {
+    return request<Clan>(`/clans/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(dto),
+    });
+}
+
+export async function apiDeleteClan(id: string): Promise<void> {
+    await request<{ ok: boolean }>(`/clans/${id}`, { method: "DELETE" });
+}
+
+export async function apiJoinClan(id: string): Promise<{ status: "joined" | "pending" }> {
+    return request<{ status: "joined" | "pending" }>(`/clans/${id}/join`, { method: "POST" });
+}
+
+export async function apiJoinClanByInvite(code: string): Promise<Clan> {
+    return request<Clan>(`/clans/invite/${code}`, { method: "POST" });
+}
+
+export async function apiLeaveClan(id: string): Promise<void> {
+    await request<{ ok: boolean }>(`/clans/${id}/leave`, { method: "POST" });
+}
+
+export async function apiAcceptMember(clanId: string, userId: string): Promise<void> {
+    await request<{ ok: boolean }>(`/clans/${clanId}/members/${userId}/accept`, { method: "POST" });
+}
+
+export async function apiRejectMember(clanId: string, userId: string): Promise<void> {
+    await request<{ ok: boolean }>(`/clans/${clanId}/members/${userId}/reject`, { method: "POST" });
+}
+
+export async function apiKickMember(clanId: string, userId: string): Promise<void> {
+    await request<{ ok: boolean }>(`/clans/${clanId}/members/${userId}/kick`, { method: "POST" });
+}
+
+export async function apiRegenerateInvite(clanId: string): Promise<{ inviteCode: string }> {
+    return request<{ inviteCode: string }>(`/clans/${clanId}/invite`, { method: "POST" });
+}
+
+export async function apiUploadClanAvatar(clanId: string, file: File): Promise<Clan> {
+    const form = new FormData();
+    form.append("avatar", file);
+
+    const res = await fetch(`${getBaseUrl()}/clans/${clanId}/avatar`, {
+        method: "POST",
+        body: form,
+        credentials: "include",
+    });
+
+    if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as ApiError | null;
+        throw new Error(body?.message ?? `HTTP ${res.status}`);
+    }
+
+    return res.json() as Promise<Clan>;
+}
+
+export async function apiGetClanMessages(clanId: string): Promise<ClanChatMessage[]> {
+    return request<ClanChatMessage[]>(`/clans/${clanId}/messages`);
 }

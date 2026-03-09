@@ -26,6 +26,14 @@ import {
     handlePlayerAction,
     handleDisconnect,
     handleReconnect,
+    handleGlobalChat,
+    handleRoomChat,
+    handleClanChat,
+    handleClanChatJoin,
+    handleClanChatLeave,
+    addGlobalChatClient,
+    removeGlobalChatClient,
+    removeClanChatClientFromAll,
 } from "./handlers.ts";
 import type { WsData } from "./types.ts";
 
@@ -59,6 +67,9 @@ app.use("/api/games", gamesRouter);
 
 import { rankingsRouter } from "./modules/rankings/rankings.routes.ts";
 app.use("/api/rankings", rankingsRouter);
+
+import { clansRouter } from "./modules/clans/clan.routes.ts";
+app.use("/api/clans", clansRouter);
 
 // ─── Public rooms list (REST) ───────────────────────────────────────────────
 
@@ -146,6 +157,9 @@ wss.on("connection", (ws: WebSocket) => {
     const data = getWsData(ws);
     console.log(`[ws] connected  ${data.id}`);
 
+    // Register for global chat
+    addGlobalChatClient(ws);
+
     ws.on("message", (raw: Buffer | string) => {
 
         const msg = parseClientMessage(raw.toString());
@@ -182,10 +196,27 @@ wss.on("connection", (ws: WebSocket) => {
             case "RECONNECT":
                 void handleReconnect(ws);
                 break;
+            case "GLOBAL_CHAT":
+                void handleGlobalChat(ws, msg.payload);
+                break;
+            case "ROOM_CHAT":
+                handleRoomChat(ws, msg.payload);
+                break;
+            case "CLAN_CHAT":
+                void handleClanChat(ws, msg.payload);
+                break;
+            case "CLAN_CHAT_JOIN":
+                void handleClanChatJoin(ws, msg.payload);
+                break;
+            case "CLAN_CHAT_LEAVE":
+                handleClanChatLeave(ws, msg.payload);
+                break;
         }
     });
 
     ws.on("close", () => {
+        removeGlobalChatClient(ws);
+        removeClanChatClientFromAll(ws);
         handleDisconnect(ws);
         console.log(`[ws] disconnected ${data.id}`);
     });

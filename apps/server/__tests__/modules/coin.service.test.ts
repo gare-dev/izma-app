@@ -18,7 +18,7 @@ vi.mock("../../src/modules/auth/auth.service.ts", () => ({
     getUserBalance: vi.fn(),
 }));
 
-import { awardCoins, getBalance, COINS } from "../../src/modules/coins/coin.service";
+import { awardCoins, getBalance, getTransactions, COINS } from "../../src/modules/coins/coin.service";
 import { addCoinsToUser, getUserBalance } from "../../src/modules/auth/auth.service";
 import { query } from "../../src/db";
 
@@ -97,6 +97,66 @@ describe("coin.service", () => {
             mockGetBalance.mockResolvedValue(null);
             const balance = await getBalance("guest1");
             expect(balance).toBeNull();
+        });
+    });
+
+    describe("getTransactions", () => {
+        it("returns mapped transactions from DB", async () => {
+            mockQuery.mockResolvedValue({
+                rows: [
+                    { user_id: "u1", amount: 10, reason: "VICTORY", room_id: "r1", created_at: "2025-01-01T00:00:00Z" },
+                    { user_id: "u1", amount: 2, reason: "PARTICIPATION", room_id: "r2", created_at: new Date("2025-01-02") },
+                ],
+                rowCount: 2,
+            } as any);
+
+            const txns = await getTransactions("u1");
+            expect(txns).toHaveLength(2);
+            expect(txns[0]).toMatchObject({ userId: "u1", amount: 10, reason: "VICTORY", roomId: "r1" });
+            expect(txns[1]!.timestamp).toBeDefined();
+        });
+
+        it("returns empty array for no transactions", async () => {
+            mockQuery.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+            expect(await getTransactions("u1")).toEqual([]);
+        });
+
+        it("uses parameterized query (SQL injection safety)", async () => {
+            mockQuery.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+            await getTransactions("'; DROP TABLE coin_transactions; --");
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("$1"),
+                ["'; DROP TABLE coin_transactions; --"],
+            );
+        });
+
+        it("limits results to 100", async () => {
+            mockQuery.mockResolvedValue({ rows: [], rowCount: 0 } as any);
+            await getTransactions("u1");
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("LIMIT 100"),
+                expect.any(Array),
+            );
+        });
+    });
+
+    describe("security", () => {
+        it("invalidates Redis session cache on awardCoins", async () => {
+            const { redis } = await import("../../src/redis");
+            mockAddCoins.mockResolvedValue(100);
+            mockQuery.mockResolvedValue({ rows: [], rowCount: 1 } as any);
+            await awardCoins("u1", "VICTORY", "r1");
+            expect(redis.del).toHaveBeenCalledWith("session:u1");
+        });
+
+        it("uses parameterized query for INSERT", async () => {
+            mockAddCoins.mockResolvedValue(100);
+            mockQuery.mockResolvedValue({ rows: [], rowCount: 1 } as any);
+            await awardCoins("u1", "VICTORY", "r1");
+            expect(mockQuery).toHaveBeenCalledWith(
+                expect.stringContaining("INSERT INTO coin_transactions"),
+                ["u1", 10, "VICTORY", "r1"],
+            );
         });
     });
 });

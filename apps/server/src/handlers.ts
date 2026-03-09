@@ -23,7 +23,25 @@ import { verifyToken } from "./modules/auth/jwt.service.ts";
 import { getGameById, pickRandomGames } from "./modules/games/games.service.ts";
 import { awardCoins, COINS } from "./modules/coins/coin.service.ts";
 import { getUserById } from "./modules/auth/auth.service.ts";
+import { saveClanMessage, isClanMember } from "./modules/clans/clan.service.ts";
 import type { RoomGameSettings } from "@izma/types";
+
+// ─── Global chat state ──────────────────────────────────────────────────────
+
+const globalChatClients = new Set<WebSocket>();
+
+export function addGlobalChatClient(ws: WebSocket): void {
+    globalChatClients.add(ws);
+}
+
+export function removeGlobalChatClient(ws: WebSocket): void {
+    globalChatClients.delete(ws);
+}
+
+// Flood protection: max 3 messages per 5 seconds per connection
+const FLOOD_WINDOW_MS = 5_000;
+const FLOOD_MAX_MSGS = 3;
+const chatTimestamps = new WeakMap<WebSocket, number[]>();
 
 // ─── AUTH (over WebSocket) ──────────────────────────────────────────────────
 
@@ -518,4 +536,244 @@ export async function handleReconnect(ws: WebSocket) {
     broadcast(room, { type: "ROOM_UPDATE", payload: { room: roomSnapshot(room) } });
 
     console.log(`[room] ${player.nickname} reconnected to ${room.id}`);
+}
+
+// ─── GLOBAL_CHAT ────────────────────────────────────────────────────────────
+
+const MAX_CHAT_MESSAGE_LENGTH = 200;
+
+export async function handleGlobalChat(
+    ws: WebSocket,
+    payload: { message: string },
+) {
+    const data = getWsData(ws);
+    const username = data.username ?? "Anônimo";
+
+    // Validate message
+    const text = (payload.message ?? "").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
+    if (!text) return;
+
+    // Flood protection
+    const now = Date.now();
+    let timestamps = chatTimestamps.get(ws);
+    if (!timestamps) {
+        timestamps = [];
+        chatTimestamps.set(ws, timestamps);
+    }
+
+    // Remove timestamps outside window
+    while (timestamps.length > 0 && timestamps[0]! < now - FLOOD_WINDOW_MS) {
+        timestamps.shift();
+    }
+
+    if (timestamps.length >= FLOOD_MAX_MSGS) {
+        ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Calma! Aguarde um pouco antes de enviar outra mensagem." } }));
+        return;
+    }
+
+    timestamps.push(now);
+
+    // Resolve avatar and bio for authenticated users
+    let avatarUrl: string | null = null;
+    let bio: string | null = null;
+    if (data.userId) {
+        const user = await getUserById(data.userId);
+        avatarUrl = user?.avatarUrl ?? null;
+        bio = user?.bio ?? null;
+    }
+
+    // Broadcast to all global chat clients
+    const msg = JSON.stringify({
+        type: "GLOBAL_CHAT_MESSAGE",
+        payload: {
+            id: data.id,
+            userId: data.userId,
+            username,
+            avatarUrl,
+            bio,
+            message: text,
+            timestamp: now,
+        },
+    });
+
+    for (const client of globalChatClients) {
+        if (client.readyState === 1) {
+            client.send(msg);
+        }
+    }
+}
+
+// ─── ROOM_CHAT ──────────────────────────────────────────────────────────────
+
+export function handleRoomChat(
+    ws: WebSocket,
+    payload: { message: string },
+) {
+    const data = getWsData(ws);
+    if (!data.roomId) return;
+
+    const room = getRoom(data.roomId);
+    if (!room) return;
+
+    const player = room.players.find((p) => p.id === data.id);
+    if (!player) return;
+
+    // Validate message
+    const text = (payload.message ?? "").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
+    if (!text) return;
+
+    // Flood protection (reuses same WeakMap)
+    const now = Date.now();
+    let timestamps = chatTimestamps.get(ws);
+    if (!timestamps) {
+        timestamps = [];
+        chatTimestamps.set(ws, timestamps);
+    }
+    while (timestamps.length > 0 && timestamps[0]! < now - FLOOD_WINDOW_MS) {
+        timestamps.shift();
+    }
+    if (timestamps.length >= FLOOD_MAX_MSGS) {
+        ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Calma! Aguarde um pouco antes de enviar outra mensagem." } }));
+        return;
+    }
+    timestamps.push(now);
+
+    broadcast(room, {
+        type: "ROOM_CHAT_MESSAGE",
+        payload: {
+            playerId: player.id,
+            username: player.nickname,
+            avatarUrl: player.avatarUrl,
+            bio: player.bio,
+            message: text,
+            timestamp: now,
+        },
+    });
+}
+
+// ─── Clan chat state ────────────────────────────────────────────────────────
+
+/** Maps clanId → set of connected WebSockets for that clan */
+const clanChatClients = new Map<string, Set<WebSocket>>();
+
+export function addClanChatClient(clanId: string, ws: WebSocket): void {
+    let set = clanChatClients.get(clanId);
+    if (!set) {
+        set = new Set();
+        clanChatClients.set(clanId, set);
+    }
+    set.add(ws);
+}
+
+export function removeClanChatClient(clanId: string, ws: WebSocket): void {
+    const set = clanChatClients.get(clanId);
+    if (set) {
+        set.delete(ws);
+        if (set.size === 0) clanChatClients.delete(clanId);
+    }
+}
+
+export function removeClanChatClientFromAll(ws: WebSocket): void {
+    for (const [clanId, set] of clanChatClients) {
+        set.delete(ws);
+        if (set.size === 0) clanChatClients.delete(clanId);
+    }
+}
+
+// ─── CLAN_CHAT_JOIN / CLAN_CHAT_LEAVE ───────────────────────────────────────
+
+export async function handleClanChatJoin(
+    ws: WebSocket,
+    payload: { clanId: string },
+) {
+    const data = getWsData(ws);
+    if (!data.userId) return;
+
+    const clanId = payload.clanId;
+    if (!clanId) return;
+
+    const member = await isClanMember(clanId, data.userId);
+    if (!member) return;
+
+    addClanChatClient(clanId, ws);
+}
+
+export function handleClanChatLeave(
+    ws: WebSocket,
+    payload: { clanId: string },
+) {
+    const clanId = payload.clanId;
+    if (!clanId) return;
+    removeClanChatClient(clanId, ws);
+}
+
+// ─── CLAN_CHAT ──────────────────────────────────────────────────────────────
+
+export async function handleClanChat(
+    ws: WebSocket,
+    payload: { clanId: string; message: string },
+) {
+    const data = getWsData(ws);
+    if (!data.userId) {
+        ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Autenticação necessária." } }));
+        return;
+    }
+
+    const text = (payload.message ?? "").trim().slice(0, MAX_CHAT_MESSAGE_LENGTH);
+    if (!text) return;
+
+    const clanId = payload.clanId;
+    if (!clanId) return;
+
+    // Check membership
+    const member = await isClanMember(clanId, data.userId);
+    if (!member) {
+        ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Você não é membro deste clã." } }));
+        return;
+    }
+
+    // Flood protection
+    const now = Date.now();
+    let timestamps = chatTimestamps.get(ws);
+    if (!timestamps) {
+        timestamps = [];
+        chatTimestamps.set(ws, timestamps);
+    }
+    while (timestamps.length > 0 && timestamps[0]! < now - FLOOD_WINDOW_MS) {
+        timestamps.shift();
+    }
+    if (timestamps.length >= FLOOD_MAX_MSGS) {
+        ws.send(JSON.stringify({ type: "ERROR", payload: { message: "Calma! Aguarde um pouco antes de enviar outra mensagem." } }));
+        return;
+    }
+    timestamps.push(now);
+
+    // Persist & get enriched message
+    const saved = await saveClanMessage(clanId, data.userId, text);
+
+    // Register sender in clan chat clients if not already
+    addClanChatClient(clanId, ws);
+
+    // Broadcast to all connected clan members
+    const msg = JSON.stringify({
+        type: "CLAN_CHAT_MESSAGE",
+        payload: {
+            id: saved.id,
+            clanId: saved.clanId,
+            userId: saved.userId,
+            username: saved.username,
+            avatarUrl: saved.avatarUrl,
+            message: saved.message,
+            timestamp: saved.timestamp,
+        },
+    });
+
+    const set = clanChatClients.get(clanId);
+    if (set) {
+        for (const client of set) {
+            if (client.readyState === 1) {
+                client.send(msg);
+            }
+        }
+    }
 }

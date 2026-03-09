@@ -19,9 +19,12 @@ function makePlayers(count: number): Player[] {
 describe("ReactionGameEngine", () => {
     beforeEach(() => {
         vi.useFakeTimers();
+        // Pin random so the signal delay (1000 + rand*3000) is deterministic (~3970ms)
+        vi.spyOn(Math, "random").mockReturnValue(0.99);
     });
 
     afterEach(() => {
+        vi.restoreAllMocks();
         vi.useRealTimers();
     });
 

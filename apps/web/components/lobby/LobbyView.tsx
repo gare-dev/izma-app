@@ -2,6 +2,7 @@ import type { Room } from "@izma/types";
 import { useGameStore } from "@/store/useGameStore";
 import Button from "@/components/ui/Button";
 import PlayerList from "@/components/ui/PlayerList";
+import RoomChat from "@/components/chat/RoomChat";
 import styles from "./LobbyView.module.css";
 
 interface LobbyViewProps {
@@ -73,6 +74,8 @@ export default function LobbyView({ room }: LobbyViewProps) {
                     </Button>
                 )}
             </div>
+
+            <RoomChat />
 
             <p className={styles.hint}>
                 Compartilhe o link com seus amigos para eles entrarem na sala.
