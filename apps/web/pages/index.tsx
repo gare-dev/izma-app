@@ -193,6 +193,14 @@ export default function HomePage() {
             <span className={styles.quickIcon}>🏰</span>
             <span className={styles.quickLabel}>Clãs</span>
           </button>
+          <button
+            type="button"
+            className={`${styles.quickBtn} ${styles.quickBrowse}`}
+            onClick={() => router.push("/history")}
+          >
+            <span className={styles.quickIcon}>📋</span>
+            <span className={styles.quickLabel}>Histórico</span>
+          </button>
         </section>
 
         {/* ── Error banner ── */}

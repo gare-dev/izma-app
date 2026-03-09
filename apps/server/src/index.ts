@@ -71,6 +71,9 @@ app.use("/api/rankings", rankingsRouter);
 import { clansRouter } from "./modules/clans/clan.routes.ts";
 app.use("/api/clans", clansRouter);
 
+import { matchesRouter } from "./modules/matches/match.routes.ts";
+app.use("/api/matches", matchesRouter);
+
 // ─── Public rooms list (REST) ───────────────────────────────────────────────
 
 import { getAllRooms } from "./rooms.ts";
@@ -132,6 +135,14 @@ server.on("upgrade", (req, socket, head) => {
                 isGuest: true,
             };
 
+            // Buffer messages that arrive while we verify the token so they
+            // are not lost.  verifyToken is async (DB blacklist check + HMAC),
+            // and the client may send a message (e.g. CREATE_ROOM) before the
+            // "connection" handler is registered.
+            const pending: (Buffer | string)[] = [];
+            const bufferHandler = (raw: Buffer | string) => pending.push(raw);
+            ws.on("message", bufferHandler);
+
             // Auto-authenticate from accessToken cookie
             const cookies = parseCookies(req.headers.cookie);
             const token = cookies.accessToken;
@@ -145,8 +156,15 @@ server.on("upgrade", (req, socket, head) => {
                 }
             }
 
+            // Remove temporary buffer & register real handlers
+            ws.removeListener("message", bufferHandler);
             setWsData(ws, data);
             wss.emit("connection", ws, req);
+
+            // Replay any messages that arrived during auth
+            for (const raw of pending) {
+                ws.emit("message", raw);
+            }
         });
     } else {
         socket.destroy();

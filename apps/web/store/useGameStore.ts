@@ -220,7 +220,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
             old.onclose = null;
             old.close();
         }
-        set({ ws: null, status: "idle", room: null, gameState: null, gameResults: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [] });
+        set({ ws: null, status: "idle", room: null, gameState: null, gameResults: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [], error: null });
     },
 
     send: (msg) => {
@@ -235,7 +235,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     createRoom: (nickname, maxPlayers, gameSettings, isPrivate) => {
         const { connect, send, setNickname, totalRounds, selectionMode, selectedGameIds, roundsPerGame } = get();
         setNickname(nickname);
-        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [] });
+        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [], error: null });
 
         const games: RoomGameSettings = gameSettings ?? {
             totalRounds,
@@ -255,7 +255,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     joinRoom: (roomId, nickname) => {
         const { connect, send, setNickname } = get();
         setNickname(nickname);
-        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [] });
+        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [], error: null });
         connect(() => {
             send({ type: "JOIN_ROOM", payload: { roomId, nickname } });
         });
@@ -264,7 +264,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     joinRandomRoom: (nickname) => {
         const { connect, send, setNickname } = get();
         setNickname(nickname);
-        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [] });
+        set({ gameResults: null, gameState: null, room: null, gameOrder: [], lastCoinUpdate: null, roomMessages: [], error: null });
         connect(() => {
             send({ type: "JOIN_RANDOM", payload: { nickname } });
         });

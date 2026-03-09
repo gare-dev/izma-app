@@ -20,6 +20,7 @@ import type {
     CreateClanDTO,
     UpdateClanDTO,
     ClanChatMessage,
+    MatchSummary,
 } from "@izma/types";
 
 function getBaseUrl(): string {
@@ -221,4 +222,10 @@ export async function apiUploadClanAvatar(clanId: string, file: File): Promise<C
 
 export async function apiGetClanMessages(clanId: string): Promise<ClanChatMessage[]> {
     return request<ClanChatMessage[]>(`/clans/${clanId}/messages`);
+}
+
+// ─── Match History ──────────────────────────────────────────────────────────
+
+export async function apiGetMyMatches(limit = 20, offset = 0): Promise<MatchSummary[]> {
+    return request<MatchSummary[]>(`/matches/me?limit=${limit}&offset=${offset}`);
 }

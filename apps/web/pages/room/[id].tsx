@@ -57,24 +57,42 @@ export default function RoomPage() {
     const isConnected = status === "connected";
     const hasJoined = !!room && !!playerId;
 
+    // Auto-reconnect on page load (e.g. after refresh / connection loss)
+    const [reconnectPending, setReconnectPending] = useState(false);
+    useEffect(() => {
+        if (!hasJoined && status === "idle") {
+            setReconnectPending(true);
+            tryReconnect();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Resolve reconnect: success (hasJoined) or timeout fallback
+    useEffect(() => {
+        if (!reconnectPending) return;
+        if (hasJoined) { setReconnectPending(false); return; }
+        const timer = setTimeout(() => setReconnectPending(false), 1500);
+        return () => clearTimeout(timer);
+    }, [reconnectPending, hasJoined]);
+
     // Auto-join when logged in and not yet joined (share-link flow)
+    // Waits for reconnect attempt to resolve so we don't send both RECONNECT and JOIN_ROOM
     const [autoJoinAttempted, setAutoJoinAttempted] = useState(false);
     useEffect(() => {
-        if (isLoggedIn && roomId && !hasJoined && !autoJoinAttempted && (status === "idle" || status === "connected")) {
+        if (reconnectPending) return;
+        // If already joined (e.g. redirected from home after createRoom), mark as
+        // attempted so we never re-fire after a disconnect/leave.
+        if (hasJoined) {
+            if (!autoJoinAttempted) setAutoJoinAttempted(true);
+            return;
+        }
+        if (isLoggedIn && roomId && !autoJoinAttempted && (status === "idle" || status === "connected")) {
             setAutoJoinAttempted(true);
             setJoining(true);
             clearError();
             joinRoom(roomId, user!.username);
         }
-    }, [isLoggedIn, roomId, hasJoined, autoJoinAttempted, status, joinRoom, clearError, user]);
-
-    // Auto-reconnect on page load (e.g. after refresh / connection loss)
-    useEffect(() => {
-        if (!hasJoined && status === "idle") {
-            tryReconnect();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [reconnectPending, isLoggedIn, roomId, hasJoined, autoJoinAttempted, status, joinRoom, clearError, user]);
 
     // Kick to home if connection is lost — but try reconnecting first
     useEffect(() => {
