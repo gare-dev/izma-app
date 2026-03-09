@@ -192,6 +192,70 @@ export interface RankingsResponse {
     entries: RankedUser[];
 }
 
+// ─── Clan ──────────────────────────────────────────────────────────────────
+
+export type ClanJoinMode = "public" | "private" | "approval";
+export type ClanRole = "owner" | "admin" | "member";
+export type ClanMemberStatus = "active" | "pending";
+
+export interface Clan {
+    id: string;
+    name: string;
+    bio: string | null;
+    avatarUrl: string | null;
+    joinMode: ClanJoinMode;
+    ownerId: string;
+    inviteCode: string;
+    memberCount: number;
+    createdAt: string;
+}
+
+export interface ClanMember {
+    userId: string;
+    username: string;
+    avatarUrl: string | null;
+    role: ClanRole;
+    status: ClanMemberStatus;
+    joinedAt: string;
+}
+
+export interface ClanDetail extends Clan {
+    members: ClanMember[];
+}
+
+export interface CreateClanDTO {
+    name: string;
+    bio?: string;
+    joinMode?: ClanJoinMode;
+}
+
+export interface UpdateClanDTO {
+    name?: string;
+    bio?: string;
+    joinMode?: ClanJoinMode;
+}
+
+export interface ClanChatMessage {
+    id: string;
+    clanId: string;
+    userId: string;
+    username: string;
+    avatarUrl: string | null;
+    message: string;
+    timestamp: string;
+}
+
+/** Lightweight clan info for listing */
+export interface PublicClanInfo {
+    id: string;
+    name: string;
+    bio: string | null;
+    avatarUrl: string | null;
+    joinMode: ClanJoinMode;
+    ownerUsername: string;
+    memberCount: number;
+}
+
 // ─── API Error ─────────────────────────────────────────────────────────────
 
 export interface ApiError {

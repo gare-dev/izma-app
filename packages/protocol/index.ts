@@ -13,7 +13,16 @@ export type ClientMessage =
     /** Sent right after WS connect if the user has a JWT */
     | { type: "AUTH"; payload: { token: string } }
     /** Attempt to rejoin a room after disconnect / page reload */
-    | { type: "RECONNECT" };
+    | { type: "RECONNECT" }
+    /** Global lobby chat */
+    | { type: "GLOBAL_CHAT"; payload: { message: string } }
+    /** Room chat */
+    | { type: "ROOM_CHAT"; payload: { message: string } }
+    /** Clan chat */
+    | { type: "CLAN_CHAT"; payload: { clanId: string; message: string } }
+    /** Subscribe / unsubscribe from clan chat room */
+    | { type: "CLAN_CHAT_JOIN"; payload: { clanId: string } }
+    | { type: "CLAN_CHAT_LEAVE"; payload: { clanId: string } };
 
 // ─── Server → Client ───────────────────────────────────────────────────────
 
@@ -45,8 +54,12 @@ export type ServerMessage =
     | { type: "COINS_UPDATE"; payload: { userId: string; coins: number; delta: number; reason: string } }
     /** List of public rooms in lobby state */
     | { type: "ROOM_LIST"; payload: { rooms: PublicRoomInfo[] } }
-    /** Chat message from another player */
-    | { type: "CHAT_MESSAGE"; payload: { playerId: string; message: string } };
+    /** Room chat message */
+    | { type: "ROOM_CHAT_MESSAGE"; payload: { playerId: string; username: string; avatarUrl: string | null; bio: string | null; message: string; timestamp: number } }
+    /** Global lobby chat message */
+    | { type: "GLOBAL_CHAT_MESSAGE"; payload: { id: string; userId: string | null; username: string; avatarUrl: string | null; bio: string | null; message: string; timestamp: number } }
+    /** Clan chat message */
+    | { type: "CLAN_CHAT_MESSAGE"; payload: { id: string; clanId: string; userId: string; username: string; avatarUrl: string | null; message: string; timestamp: string } };
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

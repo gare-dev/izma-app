@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import AuthModal from "@/components/auth/AuthModal";
 import GameSelection from "@/components/games/GameSelection";
+import GlobalChat from "@/components/chat/GlobalChat";
 import styles from "@/styles/Home.module.css";
 
 type Tab = "create" | "join" | "browse";
@@ -14,7 +15,7 @@ type Tab = "create" | "join" | "browse";
 export default function HomePage() {
   const router = useRouter();
   const { createRoom, joinRoom, joinRandomRoom, fetchPublicRooms, publicRooms, room, error, clearError, status } = useGameStore();
-  const { user, checkAuth } = useAuthStore();
+  const { user } = useAuthStore();
 
   const [tab, setTab] = useState<Tab>("create");
   const [nickname, setNickname] = useState("");
@@ -24,11 +25,6 @@ export default function HomePage() {
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-
-  // Check auth status from cookie on mount
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
 
   // Always sync nickname from authenticated user
   const isLoggedIn = !!user;
@@ -189,6 +185,14 @@ export default function HomePage() {
             <span className={styles.quickIcon}>🎲</span>
             <span className={styles.quickLabel}>Aleatória</span>
           </button>
+          <button
+            type="button"
+            className={`${styles.quickBtn} ${styles.quickBrowse}`}
+            onClick={() => router.push("/clans")}
+          >
+            <span className={styles.quickIcon}>🏰</span>
+            <span className={styles.quickLabel}>Clãs</span>
+          </button>
         </section>
 
         {/* ── Error banner ── */}
@@ -296,6 +300,9 @@ export default function HomePage() {
             </div>
           )}
         </main>
+
+        {/* ── Global Chat ── */}
+        <GlobalChat />
       </div>
 
       <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
