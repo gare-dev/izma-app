@@ -212,7 +212,7 @@ describe("clan.service", () => {
             const result = await getClanDetail("c1");
             expect(result).not.toBeNull();
             expect(result!.members).toHaveLength(1);
-            expect(result!.members[0].userId).toBe("u2");
+            expect(result!.members[0]!.userId).toBe("u2");
         });
     });
 

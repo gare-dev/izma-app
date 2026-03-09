@@ -262,7 +262,7 @@ describe("auth.controller", () => {
 
         it("returns 201 with guest user", async () => {
             mockValidateGuest.mockReturnValue({ ok: true });
-            const guestUser = { id: "g1", username: "Player1", avatarUrl: null, bio: null, coins: 0, isGuest: true as const };
+            const guestUser = { id: "g1", username: "Player1", avatarUrl: null, bio: null, coins: 0 as const, isGuest: true as const };
             mockCreateGuest.mockResolvedValue({ user: guestUser, accessToken: "at" });
 
             const req = makeReq({ body: { username: "Player1" } });
